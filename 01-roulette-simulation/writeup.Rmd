@@ -158,12 +158,36 @@ one_series <- function(
 }
 
 # helper function
-get_last <- function(x) tail(x,n=1) 
+get_last <- function(x) tail(x,n=1)
 ```
+
+I ran the simulation once to replicate the process of one player using this strategy with the above starting values and graphed the relationship between the gamblers earnings and the number of rounds of Roulette they had played.
+
+```{r, cache=TRUE}
+#Simulating one play
+first_play <- one_series(B = 200, W = 300, L = 1000, M = 100)
+
+#Plotting the earnings based on play number
+plot(x=c(1:length(first_play[,1])),y=first_play[,1]-200, type="l",xlab = "Play Number", ylab = "Earnings",main="One Player Simulation")
+```
+
+Here is the graph of a second player's simulation again with the same starting values as above.
+
+```{r, cache=TRUE}
+#Simulating a second play
+second_play <- one_series(B = 200, W = 300, L = 1000, M = 100)
+
+#Plotting the earnings based on play number
+plot(x=c(1:length(second_play[,1])),y=second_play[,1]-200, type="l",xlab = "Play Number", ylab = "Earnings",main="A Second Player Simulation")
+```
+
+You can see from both of these graphs that each player started out with a gradual increase in earnings followed by several large troughs where they lost quite a bit of money. In each scenario the gambler's never had more than $50 in earnings and were in the negative earnings, meaning they were losing money for most of their rounds. Of course this is only 2 scenarios, but we want to know what kind of odds a gambler has of making money from this strategy overtime. Below we will run the simulation many more times to get a better estimated average earnings.
 
 # Results
 
 To determine the outcome of average earnings using the Martingale strategy I ran the simulation 10,000 times with the starting budget of $200, the budget threshold of $300, the maximum number of plays of 1,000 and a casino wager limit of $100.
+
+In each instance of running the simulation, I have also calculated the number of plays by adding up the rounds played until the simulation stopped, i.e. when one of the stopping rules, described above in methods, is met. I calculated the average earnings and the average number of plays by taking the mean earnings and mean number of plays from each of the 10,000 rounds of the simulation. 
 
 ```{r, cache=TRUE}
 # Simulation 1
