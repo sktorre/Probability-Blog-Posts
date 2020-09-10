@@ -1,0 +1,156 @@
+---
+title: "Monte Carlo Simulation Error"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    number_sections: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+library(magrittr)
+library(tgsify)
+```
+
+
+# Introduction
+
+A simulation is an imitation or estimation of a process. It is a powerful tool in trying to understand a system and how it behaves, but because it is only an approximation, there will always be some degree of error. To reduce the error, we can run the simulation more and more times but this doesn't come without a cost. The more we replicate the simulation, the more time it takes to complete the process. So how much error can we live with and how do we know how many times to replicate the simulation to receive the level of certainty we are looking for? Here we will determine the relationship between the number of replications of a simulation and the resulting degree of error.
+
+## Background
+
+A Monte Carlo simulation is a model of repeated random sampling used to predict the probability of the outcomes of the model you are simulating. The accuracy of these simulations depend on the amount of replicates. There are two types of error from these simulations, absolute error and relative error both calculated as shown below. 
+
+**Absolute Error** = $| \hat{p} - p |$
+
+**Relative Error** =  $| \hat{p} - p |/p$
+
+Here $\hat{p}$ denotes the probability estimated from the simulation and $p$ denotes the true underlying probability. Depending on the process you would like to simulate, you will want to reduce either the absolute or relative error to a certain threshold. 
+
+# Methods
+
+Here I will perform a Monte Carlo simulation on various sample sizes and different probabilities, calculating the absolute and relative error in each scenario. The sample sizes and probabilities I have chosen are as follows:
+
+$SS = (2^2,2^3,2^4,2^5,2^6,2^7,2^8,2^9,2^{10},2^{11},2^{12},2^{13},2^{14},2^{15})$
+
+$P = (0.01,0.05,0.1,0.25,0.5)$
+
+This means I will run 14x5 or 70 different simulations and each one will be replicated 5,000 times. For each sample size and probability combination I will generate binomial random variables and calculate the $\hat{p}$. From there we can use the above formulas to calculate the absolute error and relative error.
+
+```{r}
+#Simulation Parameters
+# Number of replicates
+
+#Parameters
+#   Sample size = 2^(2:15)
+#   Underlying true probability = c(0.01,0.05, 0.1, 0.25, 0.5)
+#   Parameters a list
+parameters <- list(R = 5000,ss = 4,p = .1)
+#Process
+#   Generating binomial random variables of a specific sample size and specific probability
+create_data_estimate_p <- function(parameters){
+  parameters$phat <- rbinom(parameters$R,parameters$ss,parameters$p)/parameters$ss
+  parameters
+}
+
+
+absolute_error <- function(parameters){
+  abs(parameters$phat - parameters$p)
+}
+
+
+#   Abolsute Error |p_hat - p|
+#   Relative Error |p_hat - p|/p
+#Repeat
+#   Distributions
+
+one_p_n <- function(parameters){
+  ae <- parameters %>% create_data_estimate_p %>% absolute_error
+  re <- ae/parameters$p
+  mae <- mean(ae)
+  mre <- mean(re)
+  c(mae,mre)
+}
+
+simulation_settings <- expand.grid(
+  R = 5000
+  , p = c(0.01,0.05, 0.1, 0.25, 0.5)
+  , ss = 2^(2:15)
+  , mae = NA_real_
+  , mre = NA_real_
+  , KEEP.OUT.ATTRS = FALSE
+)
+
+for(i in 1:nrow(simulation_settings)) {
+  simulation_settings[i,c("mae","mre")] <- simulation_settings[i,] %>%  as.list %>% one_p_n
+}
+```
+
+# Results
+
+The below graphs show the results of each simulation for the mean absolute error and mean relative error after 5,000 replications.
+
+```{r}
+## Plots
+
+# Mean Absolute Error Plot
+simulation_settings %>% 
+  mutate(col = factor(p) %>% as.numeric) %>% 
+  plotstyle(upright, mar = c(3,3,2,1)) %>% 
+  plot_setup(mae ~ log(ss, base = 2)) %>% 
+  split(.$p) %>% 
+  lwith({
+    lines(log(ss, base = 2),mae, type = "b",col = col[1],lwd = 4)
+    c(p[1],col[1]) 
+    }) %>% 
+    do.call("rbind",.) %>% 
+      (function(x){
+        legend("topright",legend = "p = " %|% x[,1], col = x[,2], lwd = 4, bty= "n" )
+  })
+box()
+axis(side = 1, at = axTicks(1),labels = 2^axTicks(1))
+axis(2)
+title(main = "Mean Absolute Error")
+title(ylab = "MAE", line = 2)
+title(xlab = "Sample size", line = 1.5)
+```
+
+As you can see from the graph above, the mean absolute error decreases at an exponential rate as the sample size increases for all probability levels. However, the mean absolute error varies greatly for different probability levels within smaller sample sizes. The greater the true probability, the more absolute error until a sample size of about $2^{14}$ or $16,384$ where the absolute error is just above zero for all probability levels. As we can see, as the limit of the sample size goes towards infinity, the absolute error approaches zero for all probability levels. It is interesting to note the a probability of 0.01 has an absolute error much lower than all other probability levels with a sample size as small as 4.
+
+```{r}
+# Mean Relative Error Plot
+simulation_settings %>% 
+  mutate(col = factor(p) %>% as.numeric) %>% 
+  plotstyle(upright, mar = c(3,3,2,1)) %>% 
+  plot_setup(mre ~ log(ss, base = 2)) %>% 
+  split(.$p) %>% 
+  lwith({
+    lines(log(ss, base = 2),mre, type = "b",col = col[1],lwd = 4)
+    c(p[1],col[1]) 
+  }) %>% 
+  do.call("rbind",.) %>% 
+  (function(x){
+    legend("topright",legend = "p = " %|% x[,1], col = x[,2], lwd = 4, bty= "n" )
+  })
+box()
+axis(side = 1, at = axTicks(1),labels = 2^axTicks(1))
+axis(2)
+title(main = "Mean Relative Error")
+title(ylab = "MRE", line = 2)
+title(xlab = "Sample size", line = 1.5)
+```
+
+This figure shows a negative relationship between relative error and sample size meaning as the sample size increases, the relative error will decrease. This is shown across all probability levels and is consistent with the absolute error. As the sample size increases for all probability levels, both types of errors will decrease. However, probability levels seems to have a different relationship with relative error than it does with absolute error. In this case the larger the probability the less relative error. Therefore, when simulating a smaller probability you must have a greater sample size to reduce the amount of relative error.
+
+# Conclusions
+
+Overall, we can see that as sample size increases, the amount of error decreases across all levels of probability. We can use the graphs above to understand what sample size we might need for a simulation depending on what type of error we care most about and how low of an error percentage we are willing to accept. If the true probability is larger, it will be easier to decrease the relative error and take a larger sample size to decrease the absolute error. Similarly if the true probability is smaller, the absolute error will be much lower than the relative error unless you greatly increase the sample size. 
+
+The most important insight we can gain from this exercise is to understand that there are different types of errors and they will react differently to changes in sample sizes and probability levels. It is important to understand what type of error is most important to decrease in your simulation and what level of error you are willing to accept. Knowing these variables ahead of time, you can figure out what sample size works best for your process. 
+
+
