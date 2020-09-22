@@ -15,3 +15,5 @@ Sarah Torrence
 ## [Roulette Simulation](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/01-roulette-simulation/writeup.Rmd)
 
 ## [Monte Carlo Error](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/02-monte-carlo-error/writeup.Rmd)
+
+## [What is the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd)
