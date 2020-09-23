@@ -134,9 +134,9 @@ p_win <- 0
 
 #finding the number of games in which the probability of winning the series is at least 0.8
 while (p_win < 0.8){
-  p_win <- pnbinom(num_loss,num_win,0.55)
   num_win <- num_win + 1
   num_loss <- num_loss + 1
+  p_win <- pnbinom(num_loss,num_win,0.55)
 }
 
 #adding up the wins and losses to get the total number of games
@@ -168,7 +168,7 @@ series %>% ggplot(aes(x = games, y = p)) +
       y = "Probability of Winning the World Series"
       ) +
   geom_hline(yintercept = 0.8, color = "red") +
-  geom_text(aes(x = total_games - 2, y = p_win +  0.015, label = "73")) +
+  geom_text(aes(x = total_games - 2, y = p_win +  0.015, label = "71")) +
   geom_point(aes(x = total_games, y = p_win, size = .02)) +
   theme_classic() +
   theme(legend.position = "none")
