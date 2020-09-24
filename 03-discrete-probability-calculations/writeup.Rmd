@@ -89,7 +89,7 @@ p_world_series <- function(p) {
 #vector of different probabilities of the Braves winning a head-to-head matchup
 p_braves <- seq(0,1,.001)
 
-#Calculate the probability of winning the world series acrooss a range of different possible game probabilities
+#Calculate the probability of winning the world series across a range of different possible game probabilities
 p_braves_win_world_series <- c()
 for(i in 1:length(p_braves)) {
   p_braves_win_world_series[i] <- p_world_series(p_braves[i])
@@ -98,7 +98,7 @@ for(i in 1:length(p_braves)) {
 #Create a dataframe with the two probability vectors
 world_series <- data.frame(p_braves, p_braves_win_world_series)
 
-
+#plot the dataframe
 world_series %>% ggplot(aes(x = p_braves, y = p_braves_win_world_series)) +
   geom_point(alpha =.5, size = .5) + 
   labs(
@@ -145,7 +145,7 @@ total_games <- num_win + num_loss
 
 ```{r}
 #Lets try to plot this
-
+#iterate over a sequence of series of different length up to 100 and calculate the probability of winning at each series number
 p <- c()
 games <- c()
 x <- seq(1,100,2)
@@ -156,9 +156,11 @@ for (i in x){
   games[i] <- num_wins + num_losses
 }  
 
+#Put series lengths and associated probabilities into a dataframe
 series <- data.frame(p,games) 
 series <- series %>% drop_na()
 
+#plot the series dataframe
 series %>% ggplot(aes(x = games, y = p)) +
   geom_point(alpha =1, size = .5) + 
   labs(
@@ -181,23 +183,27 @@ Using this method, I found the total number of games in a series in which the pr
 In this question we are taking what we learned from question 3 and looking a little deeper. In question 3, we assumed *P*<sub>*B*</sub> = .55, but here *P*<sub>*B*</sub> is some arbitrary number. We are still using the negative binomial distribution here, but we are missing two of the parameters and trying to find all different possible combinations of *P*<sub>*B*</sub> and series lengths where the Braves' probability of winning the entire series is at least 0.8. I found all results from a sequence of *P*<sub>*B*</sub>s from 0.51 to 1 and a sequence of series lengths from 1 to 301 and filtered for only those who resulted in a probability of the Braves winning the series of at least 0.8. Here I have plotted my results:
 
 ```{r, cache=TRUE}
+#create a dataframe of probabilities and series lengths
 series <- expand.grid(
   p = seq(0.51,1,.001),
   games = seq(1,301,2),
   p_hat = NA_real_
 )
 
+#calculate the probability for each p and series length combination
 for(i in 1:nrow(series)) {
   num_wins <- ceiling(series[i,"games"]/2)
   num_loss <- num_wins - 1
   series[i,"p_hat"] <- pnbinom(num_loss,num_wins,series[i,"p"])
 }
 
+#filter for the shortest series lengths where p_hat is greater than 0.8
 shortest_series <- series %>% filter(p_hat >= .8) %>%  
                       arrange(games, p) %>% 
                       group_by(games) %>% 
                       slice(1)
 
+#plot the results
 shortest_series %>% ggplot(aes(x = p, y = games)) + 
   geom_line() +
   labs(
@@ -220,33 +226,38 @@ This question is a bit different than the others in that here we are assuming th
 
 
 ```{r}
-win <- c(dnbinom(3,4,0.55)/0.5,
-         dnbinom(3,4,0.55),
-         dnbinom(3,4,0.55)/(dnbinom(3,4,0.55) +  dnbinom(3,4,0.45)),
-         dnbinom(3,4,0.45)/0.5,
+#Column of probabilities in which the Braves win in exactly 7 games
+win <- c(dnbinom(3,4,0.55),
+         dnbinom(3,4,0.55)*0.5,
+         dnbinom(3,4,0.55)*0.5/(dnbinom(3,4,0.55)*0.5 +  dnbinom(3,4,0.45)*0.5),
          dnbinom(3,4,0.45),
-         dnbinom(3,4,0.45)/(dnbinom(3,4,0.55) +  dnbinom(3,4,0.45))
+         dnbinom(3,4,0.45)*0.5,
+         dnbinom(3,4,0.45)*0.5/(dnbinom(3,4,0.55)*0.5 +  dnbinom(3,4,0.45)*0.5)
         )
 
-not_win <- c((0.5-dnbinom(3,4,0.55))/0.5,
-             0.5-dnbinom(3,4,0.55),
-             (0.5-dnbinom(3,4,0.55))/0.5/((0.5-dnbinom(3,4,0.55)) + (0.5-dnbinom(3,4,0.45))),
-             (0.5-dnbinom(3,4,0.45))/0.5,
+#column of probabilities in which the Braves do not win in exactly 7 games
+not_win <- c(
+              0.5-dnbinom(3,4,0.55),
+             0.5-(dnbinom(3,4,0.55)*0.5),
+             (0.5-dnbinom(3,4,0.55)*0.5)/(0.5-dnbinom(3,4,0.55)*0.5 + 0.5-dnbinom(3,4,0.45)*0.5),
              0.5-dnbinom(3,4,0.45),
-             (0.5-dnbinom(3,4,0.45))/((0.5-dnbinom(3,4,0.55)) + (0.5-dnbinom(3,4,0.45)))
+             0.5-dnbinom(3,4,0.45)*0.5,
+             (0.5-dnbinom(3,4,0.45)*0.5)/((0.5-dnbinom(3,4,0.55)*0.5) + (0.5-dnbinom(3,4,0.45)*0.5))
               )
 
+#putting columns together in a dataframe
 table_values <- data.frame(win,not_win)
 
-col_totals <- c(dnbinom(3,4,0.55) +  dnbinom(3,4,0.45),
-                (0.5-dnbinom(3,4,0.55)) +
-                (0.5-dnbinom(3,4,0.45))
+#calculating the column totals
+col_totals <- c(dnbinom(3,4,0.55)*0.5 +  dnbinom(3,4,0.45)*0.5,
+                (0.5-dnbinom(3,4,0.55)*0.5) +
+                (0.5-dnbinom(3,4,0.45)*0.5)
                 )
 ```
 
 ![](/Users/sarahtorrence/Documents/MSDS/Stat/probability-and-inference-portfolio-torrence-sarah/03-discrete-probability-calculations/Table_5.png)
 
-We know *P*(*P*<sub>*B*</sub> = 0.55\|Braves win World Series in 7 games) is the column probability for the top left section which can be found by the cell probability divided by the total probability that the Braves win in exactly 7 games (0.16677/0.29). This means that *P*(*P*<sub>*B*</sub> = 0.55\|Braves win World Series in 7 games) = 0.5714. 
+We know *P*(*P*<sub>*B*</sub> = 0.55\|Braves win World Series in 7 games) is the column probability for the top left section which can be found by the cell probability divided by the total probability that the Braves win in exactly 7 games (0.0834/0.1516). This means that *P*(*P*<sub>*B*</sub> = 0.55\|Braves win World Series in 7 games) = 0.55. 
 
 We could also solve this problem using Bayes Rule:
 
@@ -254,7 +265,7 @@ $\Pr(A|B)=\frac{\Pr(B|A)\Pr(A)}{\Pr(B)}$
 
 in this case:
 
-$P(P_B = 0.55|Braves win World Series in 7 Games)=\frac{P(Braves win World Series in 7 Games|P_B = 0.55)P(P_B = 0.55)}{P(Braves win World Series in 7 Games)} = \frac{0.3335*0.5}{0.29187} = 0.571$ 
+$P(P_B = 0.55|Braves win World Series in 7 Games)=\frac{P(Braves win World Series in 7 Games|P_B = 0.55)P(P_B = 0.55)}{P(Braves win World Series in 7 Games)} = \frac{0.1668*0.5}{0.1516} = 0.55$ 
 
 # Conclusion
 
