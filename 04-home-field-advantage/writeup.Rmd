@@ -230,8 +230,8 @@ p_b <- seq(0,1,.01)
 #take the different with or without an advantage for each P_b value
 p_diff <- c()
 for (i in seq_along(p_b)){
-  p_diff[i] <- world_series(hfi = c(0,0,1,1,1,0,0), i, advantage_multiplier = 1) -
-                world_series(hfi = c(0,0,1,1,1,0,0), i, advantage_multiplier = 1.1)
+  p_diff[i] <- world_series(hfi = c(0,0,1,1,1,0,0), p_b[i], advantage_multiplier = 1) -
+                world_series(hfi = c(0,0,1,1,1,0,0), p_b[i], advantage_multiplier = 1.1)
 }
 
 #Add these to a data frame
@@ -249,7 +249,38 @@ df_p %>% ggplot(aes(x = p_b, y = p_diff)) +
       theme_classic()
 ```
 
-This graph suggests that after the 0.5 threshold, as the probability of winning an individual game increases, the difference in probability between having a home field advantage and no home field advantage factor increases. This means that as the Braves' probabilities of winning an individual game increase when there is an advantage factor, there chances of winning the World Series is increasingly different than without a home field factor and gives them less of an overall chance of winning the World Series.
+This graph suggests that with an increase in individual game probability between about 0.3 - 0.6, the difference in probability between having a home field advantage and no home field advantage factor decreases and otherwise increases. This means there is no direct relationship between the probability of an individual game and the difference in effect of a home field advantage over the entire series. In addition, you can see that the values on the y-axis do not fluctuate too much between *P*<sub>*B*</sub> values meaning there is only ever a very small difference between the probability of winning a World Series with or without home field advantage as you change the probability of winning an individual game. to illustrate this further, I created a second graph.
+
+```{r}
+#create a sequence of possible P_b values
+p_b <- seq(0,1,.01)
+
+#take the different with or without an advantage for each P_b value
+p_adv <- c()
+p_home <- c()
+for (i in seq_along(p_b)){
+  p_adv[i] <- world_series(hfi = c(0,0,1,1,1,0,0), p_b[i], advantage_multiplier = 1)
+  p_home[i] <- world_series(hfi = c(0,0,1,1,1,0,0), p_b[i], advantage_multiplier = 1.1)
+}
+
+#Add these to a data frame
+df_p2 <- data.frame(p_b,p_adv,p_home)
+
+#graph the relationship
+df_p2 %>% ggplot(aes(x = p_b, y = p_adv)) +
+  geom_point(aes(x = p_b, y = p_adv, col = "With HF Advantage")) +
+  geom_point(aes(x = p_b, y = p_home, col = "Without HF Advantage")) +
+  labs(
+      title="Probability of Winning the World Series with/without Advantage", 
+      subtitle = "Based on Probability of Winning an Individual Game in the Series",
+      y="Probability of Winning the World Series",
+      x="Probability of Winning a Head-to-Head Game"
+      ) +
+      theme_classic() +
+      theme(legend.title = element_blank())
+```
+
+Here you can see that the probability of winning the World Series with or without home field advatange are extremely similar across the range of probabilities of winning a head-to-head game. 
 
 #### 5.  Does the difference in probabilities (with vs without home field advantage) depend on the advantage factor? 
     
@@ -263,7 +294,7 @@ adv_m <- seq(1,1.7,.01)
 adv_m_diff <- c()
 p_no_adv <- world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, advantage_multiplier = 1)
 for (i in seq_along(adv_m)){
-  adv_m_diff[i] <- p_no_adv - world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, i)
+  adv_m_diff[i] <- p_no_adv - world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, adv_m[i])
 }
 
 #Add these to a data frame
@@ -278,11 +309,45 @@ df_adv_m %>% ggplot(aes(x = adv_m, y = adv_m_diff)) +
       y="Difference in Probability of Winning the World Series",
       x="Home Field Advantage Factor"
       ) +
+      scale_x_continuous(breaks = seq(1,1.7,0.1)) +
       theme_classic()
 ```
 
-This graph shows us that there is little change to the difference in the probability of winning the World Series with or without the advantage factor until the advantage factor becomes as high as 1.4 or a 40% increase in probability for the home team. This shows that the home field advantage might not play as much into who wins the World Series as we might have thought. This relationship is exponential though so if the home field advantage factor is large, there is a much bigger difference in probability of winning the World Series with or without the home field advantage. 
+We can see that as the home field advantage multiplier increases, the difference in probabilities of winning the World Series with or without advantage increases. Interestingly, once the multiplier hits about 1.5, or a 50% home advantage, the difference begins to increase at a faster rate. Although this relationship seems strong it does not seem that significant in that the difference only ever gets as high as about 0.03 which means the home field advantage factor gives a team about a 3% advantage of winning the World Series over their opponent. 
+
+```{r}
+#create a sequence of possible advantage multiplier values
+adv_m <- seq(1,1.7,.01)
+
+#take the different with or without an advantage for each advantage multiplier value
+adv_m_diff2 <- c()
+no_adv <- world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, advantage_multiplier = 1)
+for (i in seq_along(adv_m)){
+  adv_m_diff2[i] <- world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, adv_m[i])
+}
+
+#Add these to a data frame
+df_adv_m2 <- data.frame(adv_m, adv_m_diff2)
+
+#graph the relationship
+df_adv_m %>% ggplot(aes(x = adv_m, y = adv_m_diff2)) +
+  geom_point(aes(x = adv_m, y = adv_m_diff2, col = "With Advantage \n Multiplier")) +
+  geom_hline(yintercept=no_adv, col = "blue") +
+#  geom_point(aes(x = adv_m, y = no_adv, col = "Without an Advantage Multiplier")) +
+  labs(
+      title="Probability of Winning the World Series with or without Advantage", 
+      subtitle = "Based on the Home Field Advantage Factor",
+      y="Probability of Winning the World Series",
+      x="Home Field Advantage Factor"
+      ) +
+      annotate("text",y = 0.606, x = 1.55, label = "This line represents P(Win the WW) \n without HF Advantage") +
+      theme_classic() +
+      theme(legend.title = element_blank(),
+          )
+```
+
+To illustrate the difference, I graphed the probability of winning the World Series with an advantage versus without the advantage as the multiplier increases. You can see that with an increase in the advantage multiplier the probability of the team winning the World Series decreases for this specific game sequence in which they start the first game at their opponents stadium. The graph displays quite a drastic decrease, but looking at the y-axis we can see again that this is only about a 3% decrease in chances of winning the overall series. This seems like a small difference given a multiplier of 1.7 is a 70% increase in the probability a team would win at home. 
 
 # Conclusion
 
-Overall, we can see that factoring in home field advantage does change the a team's probability of winning the World Series, but it might not be the big difference we would expect. With an advantage factor of 1.1, or a 10% increase in a team's chances of winning an individual game at home, the difference in winning the entire series was only `r round(p - p_nyc,3)`. We also can see from the last graph that unless the factor is pretty extreme, which does not seem likely in the real world of baseball, there is not a big enough difference in winning the World Series overall when increasing the home field advantage. Based on the analysis of my last [post](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd) and the first graph above, a team's probability of winning an individual game in the series is a much better indicator for their chances in winning the World Series overall as a change in this probability has a much bigger impact on the overall probability of winning the World Series than home field advantage. 
+Overall, we can see that factoring in home field advantage does change the a team's probability of winning the World Series, but it might not be the big difference we would expect. With an advantage factor of 1.1, or a 10% increase in a team's chances of winning an individual game at home, the difference in winning the entire series was only `r round(p - p_nyc,3)`. We also can see from the last few graphs that unless the factor is pretty extreme, which does not seem likely in the real world of baseball, there is not a big enough difference in winning the World Series overall when increasing the home field advantage. Based on the analysis of my last [post](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd) and the second graph above, a team's probability of winning an individual game in the series is a much better indicator for their chances in winning the World Series overall as a change in this probability has a much bigger impact on the overall probability of winning the World Series than home field advantage. 
