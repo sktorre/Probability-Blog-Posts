@@ -1,0 +1,288 @@
+---
+title: "Does Home Field Advantage Have an Impact on the Probability of Winning the World Series?"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 2
+    toc_float: true
+---
+
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+```
+
+# Introduction
+
+In my last [post](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd) I explored the relationship between winning an individual baseball game and the probability of winning the World Series. One of the limitations of this analysis was it did not account for the location of each game and how that might affect the probability of each team winning the game. Here I will take my analysis further and compare whether having home field advantage effects the probability of winning the World Series.
+
+## Background
+
+The World Series is a first-to-4-wins match-up meaning the first team to win 4 games wins with the most possible games in the series being 7. Home field advantage describes the edge one team has over their opponent when playing in their home stadium. For our analysis, we will assume the two teams playing in the World Series are the Braves, from Atlanta, and the Yankees, from New York City. In this scenario, the Braves have home field advantage when a game is played in Atlanta, and the Yankees have home field advantage when a game is played in New York City. 
+
+There are two possible location schedules possible in this scenario:
+
+| Overall advantage | Game 1 | Game 2 | Game 3 | Game 4 | Game 5 | Game 6 | Game 7 |
+|:-----------------:|:------:|:------:|:------:|:------:|:------:|:------:|:------:|
+|       Braves      |   ATL  |   ATL  |   NYC  |   NYC  |   NYC  |   ATL  |   ATL  |
+|      Yankees      |   NYC  |   NYC  |   ATL  |   ATL  |   ATL  |   NYC  |   NYC  |
+
+I will let the probability that the Braves win a single head-to-head match-up with the Yankees be denoted as *P*<sub>*B*</sub>, under the assumption that home field advantage does not exist. I will let *P*<sub>*B*</sub><sup>*H*</sup> denote the probability that the Braves win a single head-to-head match-up at home (when the game is in Atlanta). *P*<sub>*B*</sub><sup>*A*</sup> will denote the probability that the Braves win a single head-to-head match-up away (in New York City). Below I calculate the probability of the Braves winning a game at home or away (in NYC), assuming that the home advantage gives a team a 10% additional probability of winning when they are playing at home (illustrated through the 1.1 home field advantaged multiplier). 
+
+| Game location |    No advantage   | Advantage                                                            |
+|:-------------:|:-----------------:|:---------------------------------------------------------------------|
+|      ATL      | *P*<sub>*B*</sub> | *P*<sub>*B*</sub><sup>*H*</sup> = *P*<sub>*B*</sub> \* 1.1           |
+|      NYC      | *P*<sub>*B*</sub> | *P*<sub>*B*</sub><sup>*A*</sup> = 1 − (1 − *P*<sub>*B*</sub>) \* 1.1 |
+
+I will aim to answer the following questions in my analysis:
+
+1.  Compute analytically the probability that the Braves win the world
+    series when the sequence of game locations is {NYC, NYC, ATL, ATL,
+    ATL, NYC, NYC}. Calculate the probability
+    with and without home field advantage when *P*<sub>*B*</sub> = 0.55.
+    What is the difference in probabilities?
+2.  Calculate the same probabilities as the previous question by
+    simulation.
+3.  What is the absolute and relative error for your simulation in the
+    previous question?
+4.  Does the difference in probabilities (with vs without home
+    field advantage) depend on *P*<sub>*B*</sub>?
+5.  Does the difference in probabilities (with vs without home
+    field advantage) depend on the advantage factor? 
+
+To explore the relationship between home field advantage and probability of winning the World Series, we will assume the following:
+
+  * *P*<sub>*B*</sub> = 0.55
+  * The home field advantage multiplier is 1.1 (as shown above)
+  * Each game in the series is independent
+
+# Exploration
+
+I will answer our questions one by one and conclude with our overall results in understanding the relationship between home field advantage and the probability of winning the World Series.
+
+#### 1.  Compute analytically the probability that the Braves win the world series when the sequence of game locations is {NYC, NYC, ATL, ATL, ATL, NYC, NYC}. Calculate the probability with and without home field advantage when *P*<sub>*B*</sub> = 0.55.What is the difference in probabilities?
+    
+To answer this question we must take the probability of each possible World Series outcome and add them together. Because they are independent, the sum will result in the total probability of the Braves winning the World Series. This must be done accounting for home field advantage and the different game schedules. 
+
+To account for home field advantage we will set *P*<sub>*B*</sub><sup>*H*</sup> = *P*<sub>*B*</sub> \* 1.1 when a game is in Atlanta and *P*<sub>*B*</sub><sup>*A*</sup> = 1 − (1 − *P*<sub>*B*</sub>) \* 1.1 when a game is in New York. In each outcome, the probabilities will be multiplied across the up to 7 game series to find the probability the Braves win the World Series in each specific separate outcome. 
+    
+```{r}
+# Get all possible World Series outcomes
+apo <- fread("./all-possible-world-series-outcomes.csv")
+
+world_series <- function(hfi, pb, advantage_multiplier){
+  #Computes the probability a team wins the World Series accounting for the game schedule and home field         advantage over all possible World Series outcomes
+  
+  #Setting up the probability for a game at home and a game away
+  pbh <- pb*advantage_multiplier
+  pba <- 1 - (1 - pb)*advantage_multiplier
+  
+  # Calculate the probability of each possible outcome
+  apo[, p := NA_real_] # Initialize new column in apo to store prob
+  for(i in 1:nrow(apo)){
+    prob_game <- rep(1, 7)
+    for(j in 1:7){
+      p_win <- ifelse(hfi[j], pbh, pba)
+      prob_game[j] <- case_when(
+          apo[i,j,with=FALSE] == "W" ~ p_win
+        , apo[i,j,with=FALSE] == "L" ~ 1 - p_win
+        , TRUE ~ 1
+      )
+    }
+    #Multiplying the probability of each individual game to get the probability of winning the entire series
+    apo[i, p := prod(prob_game)]
+  }
+  
+  # Probability of overall World Series outcomes where the team wins
+  apo[overall_outcome == "W", sum(p)]
+}
+```
+
+```{r}
+#Game schedule: {NYC, NYC, ATL, ATL, ATL, NYC, NYC}
+p_atl <- world_series(hfi = c(1,1,0,0,0,1,1), pb = 0.55, advantage_multiplier = 1.1)
+
+#Game schedule: {ATL, ATL, NYC, NYC, NYC, ATL, ATL}
+p_nyc <- world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, advantage_multiplier = 1.1)
+
+#Probability with no home field advantage
+p <- world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, advantage_multiplier = 1)
+```
+
+The probability of the Braves winning the World Series given *P*<sub>*B*</sub> = 0.55, is `r round(p,3)`. This is assuming home field advantage does not have an effect on each individual game probability. Accounting for a home field advantage factor of 1.1 and the game schedule where the first game is in ATL the probability the Braves win the World Series is `r round(p_atl,3)`. Similarly, with a home field advantage factor of 1.1 and the game schedule with the first game in NYC, the probability the Braves win the World Series is `r round(p_nyc,3)`.
+
+Here I have summarized the results:
+
+|                           |P(Braves Win the World Series)|
+|:-------------------------:|:----------------------------:|
+|  No Home Field Advantage  |        `r round(p,3)`        |
+|      Game 1 is in ATL     |       `r round(p_atl,3)`     |
+|      Game 1 is in NYC     |       `r round(p_nyc,3)`     |
+
+As you can see accounting for home field advantage does have an effect on the overall probability of winning the World Series. In the game sequence {ATL, ATL, NYC, NYC, NYC, ATL, ATL}, 4 of the games are in Atlanta giving the Braves one more game with advantage than the Yankees. In the game sequence {NYC, NYC, ATL, ATL, ATL, NYC, NYC}, only 3 of the games are in Atlanta giving the Yankees one more game with home field advantage. You can see that this increases the probability the Braves win the World Series from `r round(p,3)` to `r round(p_atl,3)` in the first scenario and lowers the Braves' chances of winning the World Series from `r round(p,3)` to `r round(p_nyc,3)` in the second scenario.
+
+Home field advantage does effect the probability of winning the World Series, but it also varies depending on the game schedule, giving one team more of an overall advantage of winning the World Series if the first game is played in their home stadium.
+
+#### 2.  Calculate the same probabilities as the previous question by simulation.
+
+In this scenario, we are answering the same question, but instead of using each possible World Series outcome and adding their probabilities all together, we are randomly selecting a series scenario numerous times to simulate what the probabilities might look like in the real world scenario. To answer this question, I used the same probabilities as above for *P*<sub>*B*</sub><sup>*H*</sup> and *P*<sub>*B*</sub><sup>*A*</sup> and did a random simulation of 100,000 series calculating how in how many of these series the Braves won.
+    
+```{r}
+sim_world_series <- function (pb, advantage_multiplier, R){
+  #Computes the probability a team wins the World Series accounting for the game schedule and home field         advantage over a set number of randomly simulated series
+  
+  #initializing an empty dataframe to add the simulated series
+  series = data.frame(game1 = NA, game2 = NA, game3 = NA, game4 = NA, game5 = NA, game6 = NA, game7 = NA)
+  
+  #initializing the probability of winning for a home game and an away game
+  pbh <- pb*advantage_multiplier
+  pba <- 1 - (1 - pb)*advantage_multiplier
+  
+  #Calculate the probability of each random series
+  for (i in 1:R){
+     series[i,1:2] <- (rbinom(2, 1, pba))
+     series[i,3:5] <- (rbinom(3, 1, pbh))
+     series[i,6:7] <- (rbinom(2, 1, pba))
+     win_count <- 0
+     loss_count <- 0
+     for (j in 1:7){
+       if (win_count == 4 | loss_count == 4){
+         series[i,j:7] <- NA
+       }
+       ifelse (series[i,j] == 1, win_count <- win_count + 1, loss_count <- loss_count + 1)
+     }
+     series[i,"outcome"] <- ifelse((sum(series[i,],na.rm = TRUE) > 3),1,0)
+  }
+  
+  #cleaning up the outcomes to W for a win and L for a loss
+  series <- series %>% mutate(outcome = case_when(
+                                outcome == 1 ~ 'W',
+                                outcome == 0 ~ 'L'),)
+  
+  #calculating the overall probability of winning over all the simulated series
+  sum(series$outcome == "W")/nrow(series)
+}
+```
+
+```{r, cache = TRUE}
+#simulating the probability of winning the World Series with no home field advantage
+p_hat <- sim_world_series(pb = 0.55, advantage_multiplier = 1, R = 100000)
+
+#simulating the probability of winning the World Series with a home field advantage
+p_hat_adv <- sim_world_series(pb = 0.55, advantage_multiplier = 1.1, R = 100000)
+```
+
+The simulated probability of the Braves winning the World Series given *P*<sub>*B*</sub> = 0.55, is `r round(p_hat,3)`. This is assuming home field advantage does not have an effect on each individual game probability. Accounting for a home field advantage factor of 1.1 and the game schedule where the first game is in NYC the probability the Braves win the World Series is `r round(p_hat_adv,3)`.
+
+Let's see how different these simulated results are from the actual probabilities I calculated above. 
+
+#### 3.  What is the absolute and relative error for your simulation in the previous question?
+
+To answer this question we need to know how to calculate the absolute error and the relative error. Here I have added the formulas to calculate each type of error:
+
+**Absolute Error** = $| \hat{p} - p |$
+
+**Relative Error** =  $| \hat{p} - p |/p$
+
+Here $\hat{p}$ denotes the probability estimated from the simulation and $p$ denotes the true underlying probability. We have already calculated both $\hat{p}$ (simulated probability) and $p$ (actual probability) for each scenario of no home field advantage factor and with a home field advantage factor.
+    
+```{r}
+#calculate the absolute error with and without advantage
+absolute_error_adv <- abs(p_hat_adv - p_nyc)
+
+absolute_error <- abs(p_hat - p)
+
+#calculate the relative error with and without advantage
+relative_error_adv <- abs(p_hat_adv - p_nyc)/p_nyc
+
+relative_error <- abs(p_hat - p)/p
+```
+
+I have summarized the results here:
+
+:    **No Home Field Advantage**
+
+|      Absolute Error       |        Relative Error        |
+|:-------------------------:|:----------------------------:|
+|`r round(absolute_error,3)`| `r round(relative_error,3)`  |
+
+:     **Home Field Advantage**
+
+|        Absolute Error         |          Relative Error          |
+|:-----------------------------:|:--------------------------------:|
+|`r round(absolute_error_adv,3)`| `r round(relative_error_adv,3)`  |
+
+As you can see both the absolute and relative error while calculating the probability of winning the World Series accounting for a home field advantage factor is slightly larger than the probability if winning not accounting for any home field advantage. 
+
+#### 4.  Does the difference in probabilities (with vs without home field advantage) depend on *P*<sub>*B*</sub>?
+
+We know from the first question above that there is a difference in the probability of winning the World Series if there is a home field advantage factor, but does this difference change if the probability of winning an individual game changes? Here I have taken a sequence of many possible *P*<sub>*B*</sub>s and calculated the difference between the probability of winning the World Series with and without home field advantage for each possible *P*<sub>*B*</sub>. I have graphed their relationship below.
+
+```{r}
+#create a sequence of possible P_b values
+p_b <- seq(0,1,.01)
+
+#take the different with or without an advantage for each P_b value
+p_diff <- c()
+for (i in seq_along(p_b)){
+  p_diff[i] <- world_series(hfi = c(0,0,1,1,1,0,0), i, advantage_multiplier = 1) -
+                world_series(hfi = c(0,0,1,1,1,0,0), i, advantage_multiplier = 1.1)
+}
+
+#Add these to a data frame
+df_p <- data.frame(p_b,p_diff)
+
+#graph the relationship
+df_p %>% ggplot(aes(x = p_b, y = p_diff)) +
+  geom_point() +
+  labs(
+      title="Difference in Probability of Winning the World Series with/without Advantage", 
+      subtitle = "Based on Probability of Winning an Individual Game in the Series",
+      y="Difference in Probability of Winning the World Series",
+      x="Probability of Winning a Head-to-Head Game"
+      ) +
+      theme_classic()
+```
+
+This graph suggests that after the 0.5 threshold, as the probability of winning an individual game increases, the difference in probability between having a home field advantage and no home field advantage factor increases. This means that as the Braves' probabilities of winning an individual game increase when there is an advantage factor, there chances of winning the World Series is increasingly different than without a home field factor and gives them less of an overall chance of winning the World Series.
+
+#### 5.  Does the difference in probabilities (with vs without home field advantage) depend on the advantage factor? 
+    
+The advantage factor in *P*<sub>*B*</sub><sup>*H*</sup> and *P*<sub>*B*</sub><sup>*A*</sup> is the 1.1 multiplier that results in a 10% increase for the home team. What if the home team had a 15% advantage? To understand whether changes in the home field advantage factor effect the difference between the probability of winning the World Series with the factor versus without the factor I graphed the relationship across various levels of home field advantage factors. 
+
+```{r}
+#create a sequence of possible advantage multiplier values
+adv_m <- seq(1,1.7,.01)
+
+#take the different with or without an advantage for each advantage multiplier value
+adv_m_diff <- c()
+p_no_adv <- world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, advantage_multiplier = 1)
+for (i in seq_along(adv_m)){
+  adv_m_diff[i] <- p_no_adv - world_series(hfi = c(0,0,1,1,1,0,0), pb = 0.55, i)
+}
+
+#Add these to a data frame
+df_adv_m <- data.frame(adv_m, adv_m_diff)
+
+#graph the relationship
+df_adv_m %>% ggplot(aes(x = adv_m, y = adv_m_diff)) +
+  geom_point() +
+  labs(
+      title="Difference in Probability of Winning the World Series with or without Advantage", 
+      subtitle = "Based on the Home Field Advantage Factor",
+      y="Difference in Probability of Winning the World Series",
+      x="Home Field Advantage Factor"
+      ) +
+      theme_classic()
+```
+
+This graph shows us that there is little change to the difference in the probability of winning the World Series with or without the advantage factor until the advantage factor becomes as high as 1.4 or a 40% increase in probability for the home team. This shows that the home field advantage might not play as much into who wins the World Series as we might have thought. This relationship is exponential though so if the home field advantage factor is large, there is a much bigger difference in probability of winning the World Series with or without the home field advantage. 
+
+# Conclusion
+
+Overall, we can see that factoring in home field advantage does change the a team's probability of winning the World Series, but it might not be the big difference we would expect. With an advantage factor of 1.1, or a 10% increase in a team's chances of winning an individual game at home, the difference in winning the entire series was only `r round(p - p_nyc,3)`. We also can see from the last graph that unless the factor is pretty extreme, which does not seem likely in the real world of baseball, there is not a big enough difference in winning the World Series overall when increasing the home field advantage. Based on the analysis of my last [post](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd) and the first graph above, a team's probability of winning an individual game in the series is a much better indicator for their chances in winning the World Series overall as a change in this probability has a much bigger impact on the overall probability of winning the World Series than home field advantage. 
