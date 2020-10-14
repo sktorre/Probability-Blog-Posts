@@ -1,0 +1,499 @@
+---
+title: "Exploring Log Trasformations"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    number_sections: false
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+# Introduction
+
+Sometimes data is not distributed in a way that is useful for the model you are trying to build. The log transformation is often used to change the distribution of data to be closer to the normal distribution. It is commonly used in the analysis of biological data to log transform data representing concentrations or data representing dose response. It is also commonly used in psychosocial research. The use of the log transformation is to be able to change the distribution of skewed data into an approximately normal distribution so it can be used in modeling. 
+
+Here we will explore how the log transformation changes the gamma, log normal and uniform distributions and also examine how it effects summary statistics such as the arithmetic mean, geometric mean and expected value. 
+
+# Background
+
+To understand log transformation across different distributions, we will use a few terms that I would like to explain first. 
+
+* **Probability Density Function:** Commonly known as the PDF, the probability density function is the density of a continuous random variable. It gives us the relative likelihood that any randomly selected value of a given sample will equal that sample value. 
+
+* **Cumulative Density Function:** Commonly known as the CDF, the cumulative density function is a monotonically increasing line of the cumulative probability of a continuous distribution with values ranging from 0 to 1.
+
+* **Logarithmic Transformation:** The logarithmic transformation is the data transformation method in which x is replaced with log(x).
+
+* **Arithmetic Mean:** The arithmetic mean is what we would typically think of as the mean of a set of data points. It is the average of a set of values calculated by adding all the values together and dividing by the total number of values.
+
+* **Geometric Mean:** The geometric mean is the central number in a geometric progression. It is calculated by taking the nth root of the product of data points where n in the number of data points.
+
+* **Expected Value:** The expected value is a predicted value of a variable calculated as the sum of all possible values each multiplied by the probability of its occurrence. In many distributions where each value has the same probability of occurrence the expected value is equal to the arithmetic mean. 
+
+# Exploration
+
+I will explore 3 different types of distributions, gamma, log normal and uniform, and understand how the log transformation effects each distribution type. For each distribution I will:
+
+-   Generate a figure of the PDF and CDF, marking the mean and median in each case.
+
+-   Generate a figure of the PDF and CDF of the transformation Y = log(X) random variable, 
+    marking the mean and median in each case. For these graphs I will use simulation taking 
+    the log transformation.
+
+-   Generate 1000 samples of size 100 and calculate the geometric and arithmetic
+    mean. I will also create a scatter plot of the geometric and arithmetic sample
+    means, adding the line of identify as a reference line.
+
+-   Generate a histogram of the difference between the arithmetic mean
+    and the geometric mean.
+
+### Gamma Distribution
+
+The gamma distribution is a two-parameter family of continuous probability distributions described by the shape ($\alpha$) and the scale ($\beta$). I will explore the PDF and CDF of the gamma distribution using the shape of 3 and the scale of 1.
+
+*X* ∼ GAMMA(shape = 3, scale = 1)
+
+The mean of the gamma distribution is calculated as follows:
+
+$mean = \alpha/\beta$
+
+I will first plot the PDF and CDF of the gamma distribution to understand the distribution better.
+```{r}
+#parameters
+shape = 3
+scale = 1
+
+#range
+g_range <- seq(0,15,0.01)
+
+#creating the gamma pdf
+g_pdf <- dgamma(g_range, shape, scale)
+
+#calculating the mean and median
+g_mean <- shape/scale
+g_median <- qgamma(0.5, shape, scale)
+  
+#plot of pdf
+plot(g_range,g_pdf, type = "l", main = "PDF of the Gamma Distribution", xlab = "X Range of Values" , ylab = "Density")
+abline(v = g_mean, col = "blue")
+abline(v = g_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+As you can see from the graph of the PDF, the gamma distribution is skewed right and goes to zero for any input values below zero. The median is slightly smaller than the mean of 3 and in this specific gamma distribution values above 10 go to zero. Let's plot the CDF and see what it looks like. 
+
+```{r}
+#creating the gamma cdf
+g_cdf <- pgamma(g_range, shape, scale)
+  
+#plot of pdf
+plot(g_range,g_cdf, type = "l", main = "CDF of the Gamma Distribution", xlab = "X Range of Values" , ylab = "Probability")
+abline(v = g_mean, col = "blue")
+abline(v = g_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Similar to the PDF, values below zero do not occur and values above 10 very rarely occur. Most values occur between 0 and 7 where the curve is sharp. The median and mean are both around the middle of the sharp curve which intuitively makes sense as this is around where half of the values have occurred. 
+
+Let's see how taking the log transformation of the gamma distribution above will change the distribution.
+
+```{r}
+#taking the log tranformation
+g <- rgamma(10000, shape, scale)
+
+log_g <- log(g)
+
+#calculating the mean and median
+log_g_mean <- log(shape/scale)
+log_g_median <- log(qgamma(0.5, shape, scale))
+
+#creating the log gamma pdf
+hist(log_g, breaks = 100, main = "PDF of the Gamma Distribution", sub = "Log Transformation", 
+     xlab = "X Range of Values" , ylab = "Density")
+abline(v = log_g_mean, col = "blue")
+abline(v = log_g_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Here we can see that taking the log transformation of the gamma distribution has an approximately normal distribution. The median is still slightly below the mean and it is not perfect, but this transformation has significant implications. If we have a variable that is distributed with this gamma distribution, then we can take the log transformation to put the data in an approximately normal form that can then be used in modeling where the normal distribution is necessary. Let's look at the CDF to further understand this transformation.
+
+```{r}
+#creating the log gamma cdf
+plot(ecdf(log_g), main = "CDF of the Gamma Distribution", sub = "Log Transformation", 
+     xlab = "X Range of Values" , ylab = "Probability")
+abline(v = log_g_mean, col = "blue")
+abline(v = log_g_median, col = "forestgreen")
+legend("topleft",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Again, this CDF is similar to that of the normal distribution with most values occurring between -1 and 2. We can look at the arithmetic and geometric sample means to try and further understand this log transformation.
+
+```{r}
+#Arithmetic and geometric sample mean
+art_g_mean = NA
+geo_g_mean = NA
+for (i in 1:1000){
+  g_sample <- rgamma(n=100, shape, scale)
+  art_g_mean[i] <- mean(g_sample)
+  geo_g_mean[i] <- exp(mean(log(g_sample)))
+}
+
+#x axis - arithmetic mean, y axis - geometric mean
+plot(art_g_mean,geo_g_mean, main = "Exploring the Relationship Between the Arithmetic Mean \n and the Geometric Mean",      xlab = "Arithmetic Mean", ylab = "Geometric Mean", sub = "Gamma Distribution")
+abline(0,1, col = "red")
+legend("topleft", legend = c("Line of Identity"), col = c("red"), lty = 1, cex = 0.8)
+```
+
+It looks like there is a positive linear relationship between the arithmetic mean and the geometric mean, but we can clearly see that these values are not the same. All values fall under the line of identity meaning the arithmetic mean seems to be larger than the geometric mean in all instances. Let's analyze the difference a bit further by creating a histogram of the exact differences betweeen each arithmetic and geometric mean. 
+
+```{r}
+#difference in the two means
+g_mean_diff <- art_g_mean - geo_g_mean
+
+#plotting the difference
+hist(g_mean_diff, breaks = 100, main = "Difference Between the Arithmetic Mean and the Geometric Mean", xlab = "Diff = (Arithmetic Mean - Geometric Mean)", ylab = "Frequency", sub = "Gamma Distribution")
+```
+
+Here we can see that the difference between the arithmetic and geometric means is approximately normally distributed. More importantly though, we can see that the difference is always greater than zero. Does this mean that the Arithmetic mean is always greater than the geometric mean in other types of distributions? Let's to a similar on the log normal distribution to find out.
+
+### Log Normal Distribution
+
+The log normal distribution is a continuous probability distribution of a random variable in which the logarithm is normally distributed described by mean, *μ*, and the standard deviation,*σ*. I will explore the PDF and CDF of the log normal distribution using a mean of -1 and a standard deviation of 1.
+
+*X* ∼ LOG NORMAL(*μ* =  − 1, *σ* = 1)
+
+The mean of the log normal distribution is calculated as follows:
+
+$mean = exp(μ + σ/2)$
+
+I will first plot the PDF and CDF of the log normal distribution to understand the distribution better.
+```{r}
+#parameters
+ln_m = -1
+ln_std = 1
+
+#range
+ln_range <- seq(0,4,0.01)
+
+#creating the log norm pdf
+ln_pdf <- dlnorm(ln_range, ln_m, ln_std)
+
+#calculating the mean and the median
+ln_median <- qlnorm(0.5, ln_m, ln_std)
+ln_mean <- exp(-1 + 1^2/2)
+
+#plot of pdf
+plot(ln_range,ln_pdf, type = "l", main = "PDF of the Log Normal Distribution", xlab = "X Range of Values" , ylab = "Density")
+abline(v = ln_mean, col = "blue")
+abline(v = ln_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Here we can see that the PDF of the log normal distribution is similar to the shape of the gamma distribution. It also goes to zero with values below zero and similarly peaks off and then goes back to zero as the x values increase. The median is much smaller than the mean and the peak is extremely large right above zero with most values below 1. Let's plot the CDF and see what it looks like.
+
+```{r}
+#creating the log norm cdf
+ln_cdf <- plnorm(ln_range, ln_m, ln_std)
+  
+#plot of pdf
+plot(ln_range,ln_cdf, type = "l", main = "CDF of the Log Normal Distribution",
+     xlab = "X Range of Values" , ylab = "Probability")
+abline(v = ln_mean, col = "blue")
+abline(v = ln_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Similar to the PDF, values below zero do not occur and values above 2 very rarely occur. Most values occur between 0 and 1 where the curve is sharp and the median is also below the mean. 
+
+Let's see how taking the log transformation of the log normal distribution above will change the distribution.
+
+```{r}
+#taking the log transformation
+ln <- rlnorm(10000, ln_m, ln_std)
+
+log_ln <- log(ln)
+
+#calculating the mean and the median
+log_ln_mean <- log(exp(-1 + 1^2/2))
+log_ln_median <- log(exp(-1))
+
+#creating the log of the log normal pdf
+hist(log_ln, breaks = 100,main = "PDF of the Log Normal Distribution", sub = "Log Transformation", 
+     xlab = "X Range of Values", ylab = "Density")
+abline(v = log_ln_mean, col = "blue")
+abline(v = log_ln_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Here we can see that taking the log transformation of the log normal distribution has an approximately normal distribution. The median is still below the mean and it is not perfect, but this transformation has significant implications. If we have a variable that is distributed with the log normal distribution, then we can take the log transformation to put the data in an approximately normal form that can then be used in modeling where the normal distribution is necessary. Let's look at the CDF to further understand this transformation.
+
+```{r}
+#creating the log of the log normal cdf
+plot(ecdf(log_ln), main = "CDF of the Log Normal Distribution", sub = "Log Transformation", 
+     xlab = "X Range of Values" , ylab = "Probability")
+abline(v = log_ln_mean, col = "blue")
+abline(v = log_ln_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Again, this CDF is similar to that of the normal distribution with most values occurring between -3 and 2. We can look at the arithmetic and geometric sample means to try and further understand this log transformation and see if there are similar results to the gamma distribution.
+
+```{r}
+#Arithmetic and geometric sample mean
+art_ln_mean = NA
+geo_ln_mean = NA
+for (i in 1:1000){
+  ln_sample <- rlnorm(n=100, ln_m, ln_std)
+  art_ln_mean[i] <- mean(ln_sample)
+  geo_ln_mean[i] <- exp(mean(log(ln_sample)))
+}
+
+#x axis - arithmetic mean, y axis - geometric mean
+plot(art_ln_mean,geo_ln_mean, main = "Exploring the Relationship Between the Arithmetic Mean \n and the Geometric Mean",xlab = "Arithmetic Mean", ylab = "Geometric Mean", sub = "Log Normal Distribution")
+abline(0,1, col = "red")
+legend("bottomright", legend = c("Line of Identity"), col = c("red"), lty = 1, cex = 0.8)
+```
+
+Just like the gamma distribution is looks like there is a positive linear relationship between the arithmetic mean and the geometric mean, but we can clearly see that these values are not the same. All values fall under the line of identity meaning the arithmetic mean is larger than the geometric mean in all instances. Again, I will create a histogram of the differences to validate that this is true.
+
+```{r}
+#difference in the two means
+ln_mean_diff <- art_ln_mean - geo_ln_mean
+
+#plotting the difference
+hist(ln_mean_diff, breaks = 100, main = "Difference Between the Arithmetic Mean and the Geometric Mean", xlab = "Diff = (Arithmetic Mean - Geometric Mean)", ylab = "Frequency", sub = "Log Normal Distribution")
+```
+
+Just like the gamma distribution the differences are fairly normally distributed and all greater than 1 meaning the the arithmetic mean is greater than the geometric mean for all data points. There seems to be a pattern between the gamma and log normal distributions. Let's try out one more distribution to see if the pattern continues.
+
+### Uniform Distribution
+
+The uniform distribution is a continuous distribution in which there is an arbitrary outcome that is bound by a minimum and maximum value. I will explore the PDF and CDF of the uniform distribution using a minimum of 0 and a maximum of 12.
+
+*X* ∼ UNIFORM(0, 12)
+
+The mean of the log normal distribution is calculated as follows:
+
+$mean = (max + min)/2$
+
+I will first plot the PDF and CDF of the uniform distribution to understand the distribution better.
+```{r}
+#parameters
+min = 0
+max = 12
+
+#range
+u_range <- seq(-1,13,0.01)
+
+#creating the uniform pdf
+u_pdf <- dunif(u_range, min, max)
+
+#calculating the mean and the median
+u_median <- qunif(0.5, min, max)
+u_mean <- (max + min)/2
+  
+#plot of pdf
+plot(u_range,u_pdf, type = "l", main = "PDF of the Uniform Distribution", xlab = "X Range of Values" , ylab = "Density")
+abline(v = u_mean, col = "blue")
+abline(v = u_median, col = "forestgreen")
+legend("topright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Here we can see that no matter what x value is inputted, the output will always be the same between 0 and 12 and will not be possible (density of 0) everywhere else. In the uniform distribution the mean and the median are the exact same value and in this case are equal to 6. Let's plot the CDF and see what it looks like. 
+
+```{r}
+#creating the uniform cdf
+u_cdf <- punif(u_range, min, max)
+  
+#plot of pdf
+plot(u_range,u_cdf, type = "l", main = "CDF of the Uniform Distribution", xlab = "X Range of Values" , ylab = "Probability")
+abline(v = u_mean, col = "blue")
+abline(v = u_median, col = "forestgreen")
+legend("bottomright",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+The CDF of the uniform distribution shows that all values of x between 0 and 12 have and equal probability of occurring. Again, we can see that the median and mean are the same value of 6. 
+
+Let's see how taking the log transformation of the uniform distribution above will change the distribution.
+
+```{r}
+#taking the log transformation
+unif <- runif(10000, min, max)
+
+log_u <- log(unif)
+
+#calculating the mean and the median
+log_u_mean <- log((max + min)/2)
+log_u_median <- log(6)
+
+#creating the log uniform pdf
+hist(log_u, breaks = 100, main = "PDF of the Uniform Distribution", sub = "Log Transformation", 
+     xlab = "X Range of Values", ylab = "Density")
+abline(v = log_u_mean, col = "blue")
+abline(v = log_u_median, col = "forestgreen")
+legend("topleft",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+Unlike the first two distributions we analyzed, the log transformation of the uniform distribution is not normal. It is heavily left skewed with a mean of slightly less than 2. Let's look at the CDF to further understand this transformation.
+
+```{r}
+#creating the log uniform cdf
+plot(ecdf(log_u), main = "CDF of the Uniform Distribution", sub = "Log Transformation", 
+     xlab = "X Range of Values", ylab = "Probability")
+abline(v = log_u_mean, col = "blue")
+abline(v = log_u_median, col = "forestgreen")
+legend("topleft",legend = c("Median", "Mean"), col = c("forestgreen","blue"), lty=1, cex = 0.8)
+```
+
+The CDF of the log transformation of the uniform distribution shows the range of x values to be from about -2 to 2.5 with the mean in about the middle of this range. Let's look at the arthimetic mean and the geometric mean to see if the results are similar to that of the gamma distribution and the log normal distribution.
+
+```{r}
+#Arithmetic and geometric sample mean
+art_u_mean = NA
+geo_u_mean = NA
+for (i in 1:1000){
+  u_sample <- runif(n=100, min, max)
+  art_u_mean[i] <- mean(u_sample)
+  geo_u_mean[i] <- exp(mean(log(u_sample)))
+}
+
+#x axis - arithmetic mean, y axis - geometric mean
+plot(art_u_mean,geo_u_mean, main = "Exploring the Relationship Between the Arithmetic Mean \n and the Geometric Mean", xlab = "Arithmetic Mean", ylab = "Geometric Mean", sub = "Uniform Distribution")
+abline(0,1, col = "red")
+legend("bottomright", legend = c("Line of Identity"), col = c("red"), lty = 1, cex = 0.8)
+```
+
+This graph looks similar to that of the previous two distributions, even though in this instance our log transformation was much different than the first two distributions. Just like the first two distributions, lets look at the difference in these two means to verify the arithmetic mean is indeed larger for all data points.
+
+Histogram of the difference between the arithmetic mean and the geometric mean
+```{r}
+#difference in the two means
+u_mean_diff <- art_u_mean - geo_u_mean
+
+#plotting the difference
+hist(u_mean_diff, breaks = 100, main = "Difference Between the Arithmetic Mean and the Geometric Mean", xlab = "Diff = (Arithmetic Mean - Geometric Mean)", ylab = "Frequency", sub = "Uniform Distribution")
+```
+
+As we can see, our intuition was correct. The differences are approximately normally distributed and all values are positive meaning the arithmetic mean is larger than the geometric mean for all instances. 
+
+We have seen this pattern for the gamma distribution, the log normal distribution and the uniform distribution, but does this hold true across all distributions and variations in distribution parameters?
+
+### Relationship Between the Arthimetic Mean and the Geometric Mean
+
+Lets see if we can prove that the arithmetic mean is larger than the geometric mean under all circumstances.
+
+So we want to prove that if *X*<sub>*i*</sub> \> 0 for all *i*, then the arithmetic
+mean is greater than or equal to the geometric mean or:
+
+$log( \frac{1}{n} \sum _{i}^{n}x_{i}) \geq log(\Pi x_{i}^{1/n})$
+
+This can be done using Jensen's inequality that states for any concave function $\varphi$,
+
+$\varphi(\frac{\sum a_{i}x_{i}} {\sum a_{i}}) \geq \frac {\sum a_{i}\varphi(x_{i})} {\sum a_{i}}$ 
+
+In our case if we set $\varphi = log()$ and the weights of $a_{i}$ are all equal, then we have
+
+$log(\frac{\sum_{i=1}^{n} x_{i}} {n}) \geq \frac {\sum_{i=1}^{n} log(x_{i})} {n}$
+
+Further
+
+$log(\frac{\sum_{i=1}^{n} x_{i}} {n}) \geq \frac {\sum_{i=1}^{n} log(x_{i})} {n} = \sum (log(x_{i}^{1/n})) = log(\Pi x_{i}^{1/n})$
+
+Thus 
+
+$log( \frac{1}{n} \sum _{i}^{n}x_{i}) \geq log(\Pi x_{i}^{1/n})$
+
+Therefore, on matter what distribution or set of parameters we use, the arithmetic mean is always larger than the geometric mean assuming *X*<sub>*i*</sub> \> 0 for all *i*. 
+
+Let's see if this characteristic holds up when looking at the expected value.
+
+### Expected Value
+
+What is the correct relationship between **E[log(X)]** and **log(E[X])**? Is one always larger?
+
+Let's do some simulation using the three distributions we were working with above to understand the relationship between **E[log(X)]** and **log(E[X])**.
+
+First we will look at the gamma distribution with the shape of 3 and a scale of 1. I will generate 1,000 samples of randomly generated gamma distributions calculating **E[log(X)]** and **log(E[X])** for each sample and plot these values.
+```{r}
+#gamma distribution
+#generate 1,000 random distributions
+xgamma <- data.frame()
+for (i in 1:1000){
+  x <- rgamma(1000,shape,scale)
+  xgamma[i,"E_log_gamma"] <- mean(log(x))
+  xgamma[i,"log_E_gamma"] <- log(mean(x))
+  xgamma[i,"gamma_diff"] <- log(mean(x)) - mean(log(x))
+}
+
+#generating a plot
+plot(xgamma[,"log_E_gamma"], xgamma[,"E_log_gamma"], main = "Relationship Between in E[log(x)] and log(E[x])", xlab = "Log of the Expected Value", ylab = "The Expected Value Logged")
+```
+
+There seems to be a fairly strong linear relationship between the two values. It looks like the log of the expected value is larger than the expected value logged, but that is a bit hard to confirm in all cases within this graph. I will create a histogram of the difference in these two values to further understand their relationship.
+```{r}
+hist(xgamma[,"gamma_diff"], main = "Difference Between E[log(x)] and log(E[x])", xlab = "log(E[x]) - E[log(x)]")
+```
+
+As we can see the differences are approximately normally distributed and more importantly all positive. This means that the **log(E[X])** is greater than **E[log(X)]** for all 1,000 randomly generated samples. Let's see if this relationship holds true across other distributions. 
+
+I will now look at the log normal distribution with the mean of -1 and standard deviation of 1. Again, I will generate 1,000 samples of randomly generated log normal distributions calculating **E[log(X)]** and **log(E[X])** for each sample and plot these values.
+```{r}
+#log normal distribution
+#generate 1,000 random distributions
+xlnorm <- data.frame()
+for (i in 1:1000){
+  x <- rlnorm(1000,ln_m,ln_std)
+  xlnorm[i,"E_log_lnorm"] <- mean(log(x))
+  xlnorm[i,"log_E_lnorm"] <- log(mean(x))
+  xlnorm[i,"lnorm_diff"] <- log(mean(x)) - mean(log(x))
+}
+
+#generating a plot
+plot(xlnorm[,"log_E_lnorm"], xlnorm[,"E_log_lnorm"],main = "Relationship Between in E[log(x)] and log(E[x])", xlab = "Log of the Expected Value", ylab = "The Expected Value Logged")
+```
+
+This graph looks extremely similar to the one we plotted above for the gamma distribution. Similarly, lets plot the difference between **E[log(X)]** and **log(E[X])** to further understand their relationship.
+
+```{r}
+hist(xlnorm[,"lnorm_diff"],main = "Difference Between E[log(x)] and log(E[x])", xlab = "log(E[x]) - E[log(x)]")
+```
+
+Again, we can see that all the values are positive meaning the **log(E[X])** is greater in all instances. 
+
+Finally, lets try this same method out for the uniform distribution to see if this pattern continues before making any conclusions between the relationship of these two values
+
+```{r}
+#uniform distribution
+#generate 1,000 random distributions
+xunif <- data.frame()
+for (i in 1:1000){
+  x <- runif(1000,min,max)
+  xunif[i,"E_log_unif"] <- mean(log(x))
+  xunif[i,"log_E_unif"] <- log(mean(x))
+  xunif[i,"unif_diff"] <- log(mean(x)) - mean(log(x))
+}
+
+#generating a plot
+plot(xunif[,"log_E_unif"], xunif[,"E_log_unif"],main = "Relationship Between in E[log(x)] and log(E[x])", xlab = "Log of the Expected Value", ylab = "The Expected Value Logged")
+```
+
+We can see that again the relationship is similar for the uniform distribution from 0 to 12. 
+
+```{r}
+hist(xunif[,"unif_diff"],main = "Difference Between E[log(x)] and log(E[x])", xlab = "log(E[x]) - E[log(x)]")
+```
+
+All differences are positive for all 1,000 randomly generated samples. This held true for all three distributions we have been exploring which means this is more than just a possible pattern. We can conclude that the **log(E[X])** is always greater than **E[log(X)]**. Of course this analysis was only done using simulation so to boldly make that statement and have it hold true across all distributions and parameters we would need to write out a comprehensive proof as simulation and experimentation always have limitations. 
+
+# Conclusion
+
+In conclusion, we have explored three different distributions, the gamma distribution, the log normal distribution and the uniform distribution and have understood how the log transformation impacts each distribution. The log transformation seems especially important in the case of the gamma distribution and the log normal distribution in that is transforms the data to be approximately normally distributed. This is important because we can use this transformation in the future to be able to utilize gamma or log normal distributed data in modeling by performing the log transformation. 
+
+Further, we have explored the relationship between some important summary statistics and how the log transformation effects these summary statistics. We know that the arithmetic mean is always greater than the geometric mean and that the log of the expected value is always greater than the expected value of the log. It will be important to understand these relationships when using the logarithmic transformation on any future research or modeling. 
