@@ -19,3 +19,5 @@ Sarah Torrence
 ## [What is the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd)
 
 ## [Does Home Field Advantage Have an Impact on the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/04-home-field-advantage/writeup.Rmd)
+
+## [Exploring Log Transformations](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/05-log-transformation/writeup.Rmd)
