@@ -1,0 +1,289 @@
+---
+title: "Exploring Order Statistics"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    number_sections: false
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+# Introduction
+
+Order statistics are when the values within the sample distribution are in ascending order. We can then use these ordered values and their associated functions to understand the distribution of the data. Here I would like to explore different order statistics and their related functions to understand a bit more how they can be of use in understanding distributions. 
+
+# Background
+
+For continuous distributions, the first order statistic is the minimum value of the distribution and this is denoted as $x_{(1)}$. The second order statistic is $x_{(2)}$ and so on until the maximum value which is denoted as $x_{(n)}$ for sample with size $n$. 
+
+The best way to understand the distribution of certain order statistics is through plotting various functions such as the density function, the probability function and the quantile function. Here I will define each of these and how we can use them to better understand sample distributions.
+
+* **Density Function:** The density function is calculated as follows:
+
+     $f_{(k)}(x) = k {n \choose x}[F(x)]^{k-1}[1 - F(x)]^{n-k}f(x)$
+
+* **Probability Function:** The probability function is calculated as follows:
+
+     $F_{(k)}(x) = \sum_{j=k}^{N}{n \choose j}[F(x)]^{j}[1 - F(x)]^{n-j}$
+
+* **Quantile Function:** The quantile function is the inverse of the probability function.
+
+# Exploration
+
+I will explore some order statistics using the functions defined above using a sample of $N = 200$ from the standard normal distribution (mean of 0 and standard deviation of 1). The first order statistics I would like to explore is the median which in this case is the 100th order statistic. This is because the median is the middle value and with all the values ordered, I know that the 100th value is the middle value out of 200 values. 
+
+I wrote a function using the formula above to calculate the density for each of my sample distribution values and plotted them to create the probability distribution function plot or the PDF.
+
+```{r}
+#density function
+dorder <- function(x, n, k){
+  k*
+  choose(n,k)*
+  (pnorm(x))^(k-1)*
+  (1-pnorm(x))^(n-k)*
+  dnorm(x)
+}
+
+#plotting the PDF
+s = seq(-4, 4, by = 0.1)
+plot(s, dorder(s, n = 200, k = 100), type = "l", 
+     main = "PDF of Median Order Statistic of the Normal Distribution",
+     ylab = "Density")
+```
+
+As we might expect, the most common median values are centered around 0 with only a few values below and above zero and no values further in the negative or positive direction. The larger the sample size the smaller the spread of this distribution and the closer centered around 0 the median value. This means the more certainty we would like of the median value's accuracy, the larger we need to increase the sample size. 
+
+To understand this even further, I used the formula for the probability function above and plotted a curve of this function using the same sample as above. 
+
+```{r}
+#probability function
+porder <- function(x, n, k){
+ pbinom(k-1, n, pnorm(x), lower.tail = FALSE)
+}
+
+#plotting the CDF
+curve(
+  porder(x, n = 200, k = 100), -4, 4,
+  xlab = parse(text="X[(100)]"),
+  ylab = "Probability",
+  main = "CDF of Median Order Statistic of the Normal Distribution"
+)
+```
+
+The cumulative density function, CDF, I have plotted here shows us similar results to the above PDF in that the median is mostly likely right around 0 and there is no probability it is anything else other than a small value very close to 0.
+
+I will next look at the quantile function for the same distribution to understand what it looks like. Since the quantile function is the inverse of the probability function, I wrote a function that will take the inverse of the function I wrote above for the probability function.
+
+```{r}
+#quantile function
+qorder <- function(p, n, k){
+  out <- p
+  for(i in seq_along(p)){
+    #inverse of the CDF
+    out[i] <- uniroot(
+      function(x){
+        porder(x, n, k) - p[i]
+      }, c(-100,100)
+    )$root
+  }
+  out
+}
+
+#plotting the quantile function
+p <- seq(0.01, 0.99, by = 0.01)
+plot(p, qorder(p, 200, 100), type = "l", main = "Plot of the Quantile Function of the Median \n  Order Statistic for the Normal Distribution",
+     xlab = "Cumulative Probability")
+
+```
+
+Again, like we saw in the previous two graphs, this one is showing that the median is most likely 0 or some value very close to zero with all possible values being between -0.2 and 0.2. Where the slope is smaller in the middle section of the graph, we can see that a huge portion of the probability is in an even smaller range between -0.1 and 0.1.
+
+Now that we understand the median order statistic for the standard normal distribution with $N = 200$ better, I want to simulate 1,000 random samples of standard normal distributions with $N = 200$ and compare the empirical CDF (ECDF) of the medians of the random samples to the CDF of the median order statistic of the standard normal distribution. 
+
+```{r}
+#simulating sampling distributions
+sim_median <- function(R){
+  sample_medians = NA
+  for (i in 1:R){
+    sample <- rnorm(200)
+    #finding the median of each sample distribution
+    sample_medians[i] <- median(sample)
+  }
+  sample_medians
+}
+
+#calling the sim_median function
+medians <- sim_median(1000)
+
+#plotting the ECDF and CDF
+plot(ecdf(medians), main = "Comparing the ECDF to the CDF for the \n Median Order Statistic of the Normal Distribution", ylab = "Probability")
+curve(porder(x, 200, 100), col = "blue", add = TRUE)
+legend("topleft",legend = c("ECDF", "CDF"), col = c("black","blue"), lty=1, cex = 0.8)
+```
+
+We can see that the ECDF of the simulated distributions is quite close to the plot of the actualy CDF for this distribution. I simulated 1,000 samples but if I were to increase the number of replicates in my simulation, the two curves would look even more similar.
+
+Let's look further into how accurate the medians of the simulated sample distributions are to the true median order statistic of the standard normal distribution. Here I plot the histogram of the medians from the simulate sample distributions along with the density function of the true distribution.
+
+```{r}
+#plotting density of simulated sampling distribution medians
+hist(medians, breaks = 100, freq = FALSE, 
+     main = "Density of Medians of Simulated Sampling Distributions",
+     xlab = "Simulated Medians")
+curve(dorder(x, 200, 100), col = "blue", add = TRUE)
+```
+
+This graph shows slightly more difference in the simulate values rather than the true distribution but overall the simulated values follow the same trend and the graph is very normally distributed around 0 with a standard deviation approximately around 1 which is the same as the standard normal distribution. We can see here that using simulation and order statistics we can try to create approximate plots of different distributions. 
+
+To further compare the theoretical distribution to the random sample, we can generate the Q-Q plot. The Q-Q plot has the quantiles of the theoretical distribution on the x-axis and the empirical quantiles from the random sample on the y - axis. In our case, the simulated data of the median will be on the y-axos and the known sampling distribution of the median for the standard normal distribution will be on the x-axis.
+
+```{r}
+#Q-Q plot of theoretical distribution to random sample
+p <- seq(0.01, 0.99, by = 0.01)
+
+x_median <- qorder(p, 200, 100)
+y_median <- quantile(medians, probs = (1:99)/99)
+
+plot(x_median,y_median, main = "Q-Q Plot of the Theoretical Distribution to \n the Random Samples of Medians",
+     xlab = "Qunatiles of the Theoretical Distribution", ylab = "Quantiles of the Simulated Distribution")
+abline(0,1, col = "red")
+
+```
+
+This plot shows us that our simulated data does agree with the theoretical sampling distribution as almost all points lie closely to the line of identity. The points on either end stray away from the line but it is only a couple and not enough to suggest that our simulation follows a different than the standard normal.
+
+Does this apply to other order statistics other than the median? Notice the functions I created above take in the parameter $k$ for the $k^{th}$ order statistic in which I inputted $100$ since the $100^{th}$ order statistic is the median, but these functions could work for and order statistic, not just the median.
+
+```{r}
+#density function
+dorder <- function(x, n, k){
+  k*
+  choose(n,k)*
+  (pnorm(x))^(k-1)*
+  (1-pnorm(x))^(n-k)*
+  dnorm(x)
+}
+
+#probability function
+porder <- function(x, n, k){
+ pbinom(k-1, n, pnorm(x), lower.tail = FALSE)
+}
+
+#quantile function
+qorder <- function(p, n, k){
+  out <- p
+  for(i in seq_along(p)){
+    #inverse of the CDF
+    out[i] <- uniroot(
+      function(x){
+        porder(x, n, k) - p[i]
+      }, c(-100,100)
+    )$root
+  }
+  out
+}
+```
+
+I would like to see if the maximum order statistic of my simulated random samples also is approximately the same distribution as the maximum order statistic for the theoretical standard normal distribution. In this case the max will be the $200^{th}$ order statistic given $N=200$ and it will be the last value. To see if these distributions are similar, I will create a Q-Q plot similar to the one I created above.
+
+```{r}
+#simulating sampling distributions
+sim_max <- function(R){
+  sample_max = NA
+  for (i in 1:R){
+    sample <- rnorm(200)
+    #finding the max of each sample distribution
+    sample_max[i] <- max(sample)
+  }
+  sample_max
+}
+
+#calling the sim_max function
+max_sim <- sim_max(1000)
+
+#Q-Q plot of theoretical distribution to random sample
+p <- seq(0.01, 0.99, by = 0.01)
+
+x_max <- qorder(p, 200, 200)
+y_max <- quantile(max_sim, probs = (1:99)/99)
+
+plot(x_max,y_max, main = "Q-Q Plot of the Theoretical Distribution to \n the Random Samples of Maximums",
+     xlab = "Qunatiles of the Theoretical Distribution", ylab = "Quantiles of the Simulated Distribution")
+abline(0,1, col = "red")
+
+```
+
+Where most of the points on the median Q-Q plot fell just above the line, the points on the Q-Q plot for the max fall directly on the line of identity. The last few points on the graph stray away from the line, but according to the rest of the graph it seems that the max order stastic of the simulated random samples also follows the same distribution as the theoretical max order statistic of the standard normal distribution.
+
+So far I have only discussed the standard normal distribution, but we could do the same analysis across all different distributions. I have modified my density, probability and qunatile functions above so that they can be used for any continuous distribution.
+
+```{r}
+#density function
+dorder_dist <- function(x, n, k, dist, ...){
+  p_F <- get(paste0("p", dist)) 
+  d_F <- get(paste0("d", dist))
+  
+  k*
+  choose(n,k)*
+  (p_F(x,...))^(k-1)*
+  (1-p_F(x,...))^(n-k)*
+  d_F(x,...)
+}
+
+#probability function
+porder_dist <- function(x, n, k, dist, ...){
+  p_F <- get(paste0("p", dist))
+  
+  pbinom(k-1, n, p_F(x, ...), lower.tail = FALSE)
+}
+
+#quantile function
+qorder_dist <- function(p, n, k, dist, ...){
+  out <- p
+  for(i in seq_along(p)){
+    #inverse of the CDF
+    out[i] <- uniroot(
+      function(x){
+        porder_dist(x, n, k, dist, ...) - p[i]
+      }, c(-100,100)
+    )$root
+  }
+  out
+}
+```
+
+With these new functions I want to look at a different important order statistic, the minimum. For this analysis I will again use the standard normal distribution with $N = 200$. In this instance we are looking at the $x_{(1)}$ order statistic since the minimum will be the first element of the sample.
+
+```{r}
+#plotting the PDF
+s = seq(-5, 3, by = 0.1)
+plot(s, dorder_dist(s, n = 200, k = 1, dist = "norm"), type = "l", 
+     main = "PDF of Minimum Order Statistic of the Normal Distribution",
+     ylab = "Density", xlab = "Minimum")
+```
+
+We can see here in the plot of the PDF that the minimum is between -4 and -2 with slightly more probability that the value is closer to -2.5. To further understand the distribution, let's look at the CDF of the Minimum. 
+
+```{r}
+#plotting the CDF
+curve(
+  porder_dist(x, n = 200, k = 1, dist = "norm"), -5, 2,
+  xlab = parse(text="X[(1)]"),
+  ylab = "Probability",
+  main = "CDF of Minimum Order Statistic of the Normal Distribution"
+)
+
+```
+
+Again, we can see that the minimum must be between -4 and -2 with the probability of 0 at all other values. If we were to increase our sample size we would see this spread decrease even further and narrow in to a value around -2.5.
+
+# Conclusion
+
+In conclusion, I explored several different important order statistics, median, maximum and minimum, and showed why these distributions can be useful. I also demonstrated several different functions, density, probability, quantile and how they can be represented graphically to deeply understand the distribution and its characteristics. In using simulation, I was able to show how we can simulate distributions from random samples to be approximately the same as theoretical distributions with a large enough number of replicates. Finally, I illustrated how we can use Q-Q plots to compare sample distributions to theoretical distributions to see if our data approximately follows a particular theoretical distribution. 
