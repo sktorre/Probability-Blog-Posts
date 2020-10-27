@@ -21,3 +21,5 @@ Sarah Torrence
 ## [Does Home Field Advantage Have an Impact on the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/04-home-field-advantage/writeup.Rmd)
 
 ## [Exploring Log Transformations](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/05-log-transformation/writeup.Rmd)
+
+## [Understanding Order Statistics](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/06-order-statistics/writeup.Rmd)
