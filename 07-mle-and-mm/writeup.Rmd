@@ -1,0 +1,1095 @@
+---
+title: "Modeling Unknown Distributions Using MLE and MM"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+library(dplyr)
+library(stats4)
+```
+
+# Introduction
+
+To be able to do any modeling you must make assumptions about your data, one being what the underlying distribution is for each of the variables in your model. What do you do when you do not know the underlying distribution of your data? In this post I will go through two of the most common ways, Maximum Likelihood Estimation and Method of Moments, for finding the best distribution fit to a data set. I will go through multiple examples and try to fit data on several different distributions to get a good sense of how each method works. The data I am using is the height and glycohemoglobin levels of adult females. The data is from a survey called the National Health and Nutrition Examination Survey 2009-2010 (NHANES), which is available in the Hmisc package.
+
+# Background
+
+## Maximum Likelihood Estimation
+
+The Maximum Likelihood Estimation, better known as MLE, is the process of trying to find the distribution that maximizes the density, or likelihood, that the data set is a specific distribution. This is done by estimating the parameters of a probability distribution by maximizing the likelihood function, meaning finding the most probable parameters given the observed data. In this method the data is fixed, and the parameters are variable. The likelihood function that we need to maximize is below as follows:
+
+$\varphi(\theta|x) = logfx_{n}(x|\theta) = \sum^{N}_{i=1}logfx(x_{i}|\theta)$
+
+This is one of the most common ways of trying to estimate the distribution of a data set, but there are also several other ways. Method of Moments is also a very common process used to understand distributions.
+
+## Method of Moments
+
+The Method of Moments, commonly known as MM, is a process in which we calculate the moments for a specific distribution and use a system of equations to solve for the specific distribution parameters. The process for MM is as follows:
+
+  Steps:
+  
+1. Examine your data and:
+    i) Choose parametric distribution 
+    ii) Identify the distribution parameters
+      
+2. Calculate/find distribution moments (need as many moments as distribution parameters) or
+3. Create a system of equations equating distribution moments to sample moments
+4. Solve system of equations for distribution parameters
+
+The solutions to the last step are the estimates of the parameters of the specific chosen distribution. To understand both of these methods in more detail, I will go through each method on numerous examples.
+
+# Explore
+
+I inputted the data from the Hmisc package and have filtered for only females over the age of 18, selecting the height and glycohemoglobin. These are the two variables in which I will try to find their underlying distributions using MLE and MM.
+
+```{r}
+#downloading the data
+Hmisc::getHdata(nhgh)
+d1 <- nhgh %>% 
+  filter(sex == "female") %>% 
+  filter(age >= 18) %>% 
+  select(gh, ht)
+```
+
+# Height
+
+The first variable in which I will try to estimate the underlying distribution is Height.
+```{r}
+hist(d1$ht, breaks = 100, freq = FALSE, main = "Height of Adult Females", xlab = "Height")
+```
+
+We can see that the distribution of this data looks like it might be normally distributed so we will see if we can find the best fit parameters to this data set for the normal distribution and see if this matches well with the underlying distribution of the heights.
+
+### Normal
+
+#### MM
+
+First, I want to use the Method of Moments to see if I can find the best fit estimated parameters for height. The two parameters for the normal distribution are mean and standard deviation. 
+
+  **x ~ normal(mean,standard deviation)**
+
+Since there are two parameters to estimate, I will need the first two moments which are E[X] and V[X] and are calculated for the normal distribution as follows.
+
+  $E[X] = \mu$
+
+  $V[X] = \sigma^2$
+
+In this case we do not need to solve for a system of equations because our two parameters happen to be equal to the first two moments, E[X] is the mean, $\mu$ and V[X] is $\sigma^2$ which is the standard deviation. We can estimate the parameters using the built in mean and standard deviation functions in R for our data set.
+```{r}
+#E[X] and V[X]
+xbar <- mean(d1$ht)
+s2 <- sd(d1$ht)
+```
+
+The estimated mean is 160.60 and the estimated standard deviation is 7.33. I will overlay the estimated PDF onto the histogram of heights I plotted above to visualize if our estimated distribution fits the data well. 
+```{r}
+#PDF
+hist(d1$ht, breaks = 100, freq = FALSE, main = "Height of Adult Females using MM", xlab = "Height")
+curve(dnorm(x, mean = xbar, 
+            sd = s2), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+It looks like our estimated normal distribution with a mean of 160.60 and a standard deviation of 7.33 fits the sample of adult female heights really well. I will overlay the estimated CDF onto the empirical CDF to see if these are also a good match. 
+```{r}
+#CDF
+plot(ecdf(d1$ht), main = "Height of Adult Females using MM - CDF Overlayed with ECDF ", xlab = "Height")
+curve(pnorm(x, mean = xbar, 
+            sd = s2), 
+            col = "red", 
+            lwd = 2,
+            add = TRUE)
+```
+
+Again, the CDF of the data follows the exact same curve as the estimated distribution. Although the match looks strong, this is based on looking at a graph of the data. To be even more sure the estimated distribution matches well with adult female heights from the sample I will plot the Q-Q plot.
+```{r}
+#Q-Q Plot
+qs <- seq(0.05, 0.95, length = 50)
+sample_qs <- quantile(d1$ht, qs)
+theor_qs <- qnorm(qs, mean = xbar, 
+            sd = s2)
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Heights using MM")
+abline(0,1, col = "red", lwd = 2)
+```
+
+All of the dots lie right one the line of identity meaning we have estimated an extremely good fit for normal distribution to the sample of adult female heights. We can take this analysis a bit further to find an estimate of the median and range of the middle 95% of the sample distribution. To do this, I will simulate this distribution 5,000 times and find the median in each instance. We can look at the sampling distribution of the medians by graphing the density of the 5,000 estimated medians. 
+```{r}
+#median using the distribution we estimated using MM
+med1 <- qnorm(.5, mean = xbar, 
+            sd = s2)
+
+#simulation of medians
+M <- 5000
+N <- 1000
+
+out <- rnorm(N*M, mean = xbar, 
+            sd = s2) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+#plot median
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Heights", xlab = "Median Height")
+```
+
+The estimated median of this normal distribution is `r round(med1,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+Using the Method of Moments I found a good approximate normal distribution with estimated parameters for the sample of adult female heights. Lets see if we can get similar results using Maximum Likelihood Estimation.
+
+#### MLE
+
+To perform MLE, I have created a likelihood function using the normal distribution and its parameters. I then plugged this function into the MLE function that will find the value of the parameters that maximize the likelihood function.
+```{r}
+nLL <- function(mean, sd){
+  fs <- dnorm(
+    x = d1$ht,
+    mean = mean, 
+    sd = sd,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 160 and 5
+param_hat <- mle(nLL,
+    start = list(mean = 160, sd = 5),
+     method = "L-BFGS-B",
+    #lower bound for height is 0 and standard deviation is 5
+    lower = c(0, 0.01)
+    )
+```
+
+The estimated mean is 160.60 and the estimated standard deviation is 7.37. These are extremely similar to the estimated parameters we found using MM so it seems like this approximated distribution should be a good fit for the data. I will plot the same graphs as above to inspect the fit of the estimated distribution to the actual data.
+```{r}
+#PDF
+hist(d1$ht, breaks = 100, freq = FALSE,main = "Height of Adult Females using MLE", xlab = "Height")
+curve(dnorm(x, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+As expected the pdf of the estimated distribution fits really well with the data.
+```{r}
+#CDF
+plot(ecdf(d1$ht),main = "Height of Adult Females using MLE - CDF Overlayed with ECDF ", xlab = "Height")
+curve(pnorm(x, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 2,
+            add = TRUE)
+```
+
+Here again, the eCDF and the CDF are pretty much an exact match. 
+```{r}
+#Q-Q Plot
+qs <- seq(0.05, 0.95, length = 50)
+sample_qs <- quantile(d1$ht, qs)
+theor_qs <- qnorm(qs, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2])
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Heights using MLE")
+abline(0,1, col = "red", lwd = 2)
+```
+
+Similarly the quantiles are very closely related with all the points lying on or very slightly off the line of identity.
+```{r}
+#median using the distribution we estimated using MLE
+med2 <- qnorm(.5, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2])
+
+#simulation of medians
+M <- 5000
+N <- 1000
+
+out <- rnorm(N*M, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2]) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Heights", xlab = "Median Height")
+```
+
+The estimated median of this normal distribution is `r round(med2,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. This is the same estimated median as using MM. The table below shows the range of the middle 95% of the sample distribution which is only a couple one hundredths different than using MM.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+MM and MLE both show that the normal distribution is a good fit for the height of adult females with almost no difference between using the two methods. I will try out the same methods using the gamma distribution to see if we can estimate parameters that make the gamma distribution a good match as well for the sample of adult female heights.
+
+### Gamma
+
+#### MM
+
+First, I want to use the Method of Moments to see if I can find the best fit estimated parameters for height for the gamma distribution. The two parameters for the gamma distribution are shape and scale. 
+
+  **x ~ gamma(shape,scale)**
+
+Since there are two parameters to estimate, I will need the first two moments which are E[X] and V[X] and are calculated for the gamma distribution as follows.
+
+  $E[X] = shape*scale = \bar{X}$
+
+  $V[X] = shape*scale^2 = s^2$
+
+Using these as a system of equations equating distribution moments to sample moments, we get
+
+$shape = \frac{\bar{X}}{scale}$
+
+substituting we get $\frac{\bar{X}}{scale} * scale^2 = s^2$
+
+therefore $scale = \frac{s^2}{\bar{X}}$
+
+and $shape = \frac{\bar{X}^2}{s^2}$
+
+We can estimate the parameters using the built in mean and variance functions in R and plugging them into the above equations for our data set.
+```{r}
+#E[X] and V[X]
+xbar <- mean(d1$ht)
+s2 <- var(d1$ht)
+
+shape_hat <- xbar^2/s2
+scale_hat <- s2/xbar
+```
+
+The estimated shape is 480.22 and the estimated scale is 0.33. I will overlay the estimated PDF onto the histogram of heights I plotted above to visualize if our estimated distribution fits the data well. 
+```{r}
+hist(d1$ht, breaks = 100, freq = FALSE,main = "Height of Adult Females using MM", xlab = "Height")
+curve(dgamma(x, shape = shape_hat, 
+            scale = scale_hat), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+It looks like our estimated gamma distribution with a shape of 480.22 and a scale of 0.33 fits the sample of adult female heights pretty well. I will overlay the estimated CDF onto the empirical CDF to see if these are also a good match. 
+```{r}
+MM_gamma <- function(x){
+  pgamma(x, shape = shape_hat, scale = scale_hat)
+}
+
+plot(ecdf(d1$ht),main = "Height of Adult Females using MM - CDF Overlayed with ECDF ", xlab = "Height")
+curve(MM_gamma(x), add = TRUE, col = "red", lwd = 2)
+```
+
+Again, the CDF of the data follows the exact same curve as the estimated distribution. Although the match looks strong, this is based on looking at a graph of the data. To be even more sure the estimated distribution matches well with adult female heights from the sample I will plot the Q-Q plot.
+```{r}
+#Q-Q Plot
+qs <- seq(0.05, 0.95, length = 50)
+sample_qs <- quantile(d1$ht, qs)
+theor_qs <- qgamma(qs, shape = shape_hat, 
+            scale = scale_hat)
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Heights using MM")
+abline(0,1, col = "red", lwd = 2)
+```
+
+It looks like the gamma distribution we estimated is a pretty good fit for the sample data but we can see the points stray very slightly from the line of identity on each end. The fit is decent, but the normal distribution we estimated above had a much stronger fit in that the quantile points matched almost exactly with the line of identity making the normal distribution we estimated above a better candidate to approximate the true distribution of the sample of adult female heights. We can use the same simulation techniques as above to estimate the median and the range of the middle 95% of the sample distribution of medians.
+```{r}
+#median using the distribution we estimated using MM
+med3<- qgamma(.5, shape = shape_hat, 
+            scale = scale_hat)
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rgamma(N*M, shape = shape_hat, 
+            scale = scale_hat) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Heights", xlab = "Median Height")
+```
+
+The estimated median of this gamma distribution is `r round(med3,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+It seems like the normal distribution is a better fit than gamma for the sample data, but lets try MLE to see if we can get a better fit of the gamma distribution.
+
+#### MLE
+
+Same as with the normal distribution, for gamma I created a likelihood function using the gamma distribution and its parameters and plugged this function into the MLE function to find the value of the shape and scale that maximize the likelihood function aka the best fit for the data.
+```{r}
+gLL <- function(shape, scale){
+  fs <- dgamma(
+    x = d1$ht,
+    shape = shape, 
+    scale = scale,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 
+param_hat <- mle(gLL,
+    start = list(shape = 480, scale = 0.3),
+     method = "L-BFGS-B",
+    #lower bound for height is 0
+    lower = c(0, 0.01)
+    )
+```
+
+The estimated shape is 480.00 and the estimated scale is 0.33. These are extremely similar to the estimated parameters we found using MM so it seems like this approximated distribution should be a similar fit for the data to what we saw above. I will plot the same graphs as above to inspect the fit of the estimated distribution to the actual data.
+```{r}
+#PDF
+hist(d1$ht, breaks = 100, freq = FALSE,main = "Height of Adult Females using MLE", xlab = "Height")
+curve(dgamma(x, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+As expected the PDF of the estimated distribution fits pretty well with the data.
+
+```{r}
+MM_gamma <- function(x){
+  pgamma(x, shape = coef(param_hat)[1], scale = coef(param_hat)[2])
+}
+
+plot(ecdf(d1$ht),main = "Height of Adult Females using MLE - CDF Overlayed with ECDF ", xlab = "Height")
+curve(MM_gamma(x), add = TRUE, col = "red", lwd = 2)
+```
+
+Here again, the eCDF and the CDF are a really good match. 
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$ht, qs)
+theor_qs <- qgamma(qs, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Heights using MLE")
+abline(0,1, col = "red", lwd = 2)
+```
+
+Similarly, the quantiles are very closely related with all the points lying on or very slightly off the line of identity until the ends where they stray just a little bit more. We can again use simulation to estimate the sample distribution of the median.
+```{r}
+#median using the distribution we estimated using MLE
+med4 <- qgamma(.5, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rgamma(N*M, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist,breaks = 50, main = "Simulated Sample Distribution of Female Heights", xlab = "Median Height")
+```
+
+The estimated median of this gamma distribution using MLE is `r round(med4,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. This is the same estimated median as using MM. The table below shows the range of the middle 95% of the sample distribution which is the same as using MM.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+The gamma distribution was a pretty decent fit to the data, but was not as good of a fit as the normal distribution we estimated. Lets try using MM and MLE on the weibull distribution to see if we can find an even better fit to the distribution of the sample of adult female heights.
+
+### Weibull
+
+#### MM
+
+We can use the Method of Moments to see if we can find the best fit estimated parameters for height for the weibull distribution. Similar to gamma, the two parameters for the weibull distribution are shape, $k$ and scale, $\lambda$. 
+
+  **x ~ weibull(shape,scale)**
+
+Since there are two parameters to estimate, I will need the first two moments which are E[X] and V[X] and calculated according to the below equations:
+
+  $E[X] = \lambda \Gamma(1 + 1/k)$
+
+  $V[X] = \lambda^2 [\Gamma(1 + 2/k) - (\Gamma(1 + 1/k))^2]$
+
+To solve the system of equations I solved for lambda in the first equation and plugged in the results to the second equation and set the equation equal to zero by subtracting V[X] to both sides.
+
+  $(E[X]/\Gamma(1 + 1/k)^2 [\Gamma(1 + 2/k) - (\Gamma(1 + 1/k))^2] - V[X] = 0$
+
+I then optimized the equation, plugging in the mean and variance for E[X] and V[X] respectively, and found the $k$ and $\lambda$ value that are the estimated shape and scale parameters for the weibull distribution.
+```{r}
+#lambda
+lambda <- function(samp_mean, k){
+  samp_mean/gamma(1+1/k)
+}
+
+#V[X]
+var_weib <- function(k, samp_mean, samp_var){
+  lambda(samp_mean,k)^2*(gamma(1+2/k)-(gamma(1+1/k))^2) - samp_var
+}
+
+#optimization function
+mm_opt <- optimize(f = function(x) {abs(var_weib(k = x, 
+                                   samp_mean = mean(d1$ht),
+                                   samp_var = var(d1$ht)))}, 
+         lower = 10, upper = 10000)
+
+#MM weibull k estimate
+weib_k <- mm_opt$minimum
+
+#MM weibull lambda estimate
+weib_lambda <- lambda(samp_mean = mean(d1$ht), k = weib_k)
+```
+
+The estimated shape is 27.40 and the estimated scale is 163.84. I will overlay the estimated PDF onto the histogram of heights to visualize if our estimated distribution fits the data well. 
+```{r}
+#PDF
+hist(d1$ht, breaks = 100, freq = FALSE, main = "Height of Adult Females using MM", xlab = "Height")
+curve(dweibull(x, shape = weib_k, 
+            scale = weib_lambda), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+While the distribution seems to fit well on both tails the peak is well to the side of the peak of the distribution of the data. It seems like this fit of the weibull distribution is not a good estimate for the distribution of the sample of female adult heights. We can look at the CDF to see this further.
+```{r}
+MM_weibull <- function(x){
+  pweibull(x, shape = weib_k, 
+            scale = weib_lambda)
+}
+
+plot(ecdf(d1$ht), main = "Height of Adult Females using MM - CDF Overlayed with ECDF ", xlab = "Height")
+curve(MM_weibull(x), add = TRUE, col = "red", lwd = 2)
+```
+
+The eCDF follows similarly to the data but several parts of the curve definitely stray away from the plot of the actual data. I will plot the Q-Q plot which will be telling on how different the estimated distribution is from the actual distribution of adult female heights.
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$ht, qs)
+theor_qs <- qweibull(qs, shape = weib_k, 
+            scale = weib_lambda)
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Heights using MM")
+abline(0,1, col = "red", lwd = 2)
+```
+
+Compared to the Q-Q plots for the normal and gamma distribution, we can see here that the quantiles for the estimated distribution are much different from the actual sample quantiles. This plot highlights that the weibull distribution with the parameters we estimated is not a good fit for our data. Like above we can use simulation to create the sampling distribution of the median of this weibull distribution.
+```{r}
+#median using the distribution we estimated using MM
+med5 <- qweibull(.5, shape = weib_k, 
+            scale = weib_lambda)
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rweibull(N*M, shape = weib_k, 
+            scale = weib_lambda) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Heights", xlab = "Median Height")
+```
+
+The estimated median of this weibull distribution is `r round(med5,2)` and the simulated medians approximately follow a normal distribution with the estimated median close to the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+Using MM we did not find a good fit of our data for the weibull distirbution, but lets see if we get different results using MLE.
+
+#### MLE
+
+Just like the normal distribution and the gamma distribution, I created a likelihood function using the weibull distribution and its parameters and plugged this function into the MLE function to find the value of the shape and scale that maximize the likelihood function aka the best fit for the data.
+```{r}
+wLL <- function(shape, scale){
+  fs <- dweibull(
+    x = d1$ht,
+    shape = shape, 
+    scale = scale,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 
+param_hat <- mle(wLL,
+    start = list(shape = 20, scale = 150),
+     method = "L-BFGS-B",
+    #lower bound for height is 0
+    lower = c(0, 0.01)
+    )
+```
+
+The estimated shape is 21.85 and the estimated scale is 164.09. These are actually quite different than the estimated parameters we found using MM so this might be a better fit for our data. I will plot the same graphs as above to inspect the fit of the estimated distribution to the actual data and see if maybe using MLE we found better results.
+```{r}
+#PDF
+hist(d1$ht, breaks = 100, freq = FALSE, main = "Height of Adult Females using MLE", xlab = "Height")
+curve(dweibull(x, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+This looks slightly better than the weibull distribution using MM but again the peak still looks slightly too far to the right of the true distribution of the data and the tails seem slightly off as well.
+```{r}
+MM_weibull <- function(x){
+  pweibull(x, shape = coef(param_hat)[1], scale = coef(param_hat)[2])
+}
+
+plot(ecdf(d1$ht),main = "Height of Adult Females using MLE - CDF Overlayed with ECDF ", xlab = "Height")
+curve(MM_weibull(x), add = TRUE, col = "red", lwd = 2)
+```
+
+The CDF overlayed with the empirical CDF shows similarly that the distribution just seems a bit different than that of the true distribution of the sample of female adult heights.
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$ht, qs)
+theor_qs <- qweibull(qs, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Heights using MLE")
+abline(0,1, col = "red", lwd = 2)
+```
+
+Again, the Q-Q plot does not look too much different than the Q-Q plot using MM. Even though there was a slight difference in the estimated parameters between using MM and MLE for the weibull distribution, both created very similar results and are not the best fit for the true sample. We can use simulation to create the sampling distribution of the median of this weibull distribution and see how it compares to the distribution we created using MM above. 
+```{r}
+#median using the distribution we estimated using MLE
+med6 <- qweibull(.5, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rweibull(N*M, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Heights", xlab = "Median Height")
+```
+
+The estimated median of this weibull distribution is `r round(med6,2)` and the simulated medians approximately follow a normal distribution with the estimated median around the middle. This is slightly different than the median using MM but only by a couple hundredths. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+Overall, it seems like there is only a slight difference in results between using the Method of Moments and Maximum Likelihood Estimation. The sample of adult female heights are best estimated by the normal distribution with the mean of about 160.6 and the standard deviation of about 7.32.
+
+We can perform the exact same procedures to try and find the best distribution and estimated parameters to fit the distribution of the sample of adult female glycohemoglobin levels.
+
+## Glycohemoglobin
+
+```{r}
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin Levels of Adult Females", xlab = "Glycohemoglobin Levels")
+```
+
+We can see that the distribution of this data looks skewed to the right with some outliers way above the majority of points in the distribution. We will see if we can find the best fit distribution and parameters to this data set and see if this matches well with the underlying distribution of glycohemoglobin levels.
+
+### Normal
+
+We will first see if the normal distribution is a good fit for the distribution of the sample of adult female glycohemoglobin levels using MM and then MLE.
+
+#### MM
+
+Same as with heights above we do not need to solve for a system of equations because our two parameters happen to be equal to the first two moments, E[X] is the mean, $\mu$ and V[X] is $\sigma^2$ which is the standard deviation. We can estimate the parameters using the built in mean and standard deviation functions in R for our data set.
+```{r}
+#E[X] and V[X]
+xbar <- mean(d1$gh)
+s2 <- sd(d1$gh)
+```
+
+The estimated mean is 5.71 and the estimated standard deviation is 0.96. I will overlay the estimated PDF onto the histogram of glycohemoglobin levels I plotted above to visualize if our estimated distribution fits the data well. 
+```{r}
+#PDF
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin of Adult Females using MM", xlab = "Glycohemoglobin")
+curve(dnorm(x, mean = xbar, 
+            sd = s2), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+It looks like the estimated normal distribution somewhat follows the same pattern as the sample data, but the peak of the estimation is no where near the height of the actual distribution of the data and does not include any density for the data skewed to the right. This does not seem like a good fit but we can examine the CDF and the eCDF to understand the fit further.
+```{r}
+#CDF
+plot(ecdf(d1$gh), main = "Glycohemoglobinof Adult Females using \n MM - CDF Overlayed with ECDF", xlab = "Glycohemoglobin")
+curve(pnorm(x, mean = xbar, 
+            sd = s2), 
+            col = "red", 
+            lwd = 2,
+            add = TRUE)
+```
+
+Again, the plot of the empirical CDF does not follow the same curve as the plot of the CDF. To be even more sure the estimated distribution dose not fit with adult femaleglycohemoglobin levels from the sample I will plot the Q-Q plot.
+```{r}
+#Q-Q Plot
+qs <- seq(0.05, 0.95, length = 50)
+sample_qs <- quantile(d1$gh, qs)
+theor_qs <- qnorm(qs, mean = xbar, 
+            sd = s2)
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Glycohemoglobin using MM")
+abline(0,1, col = "red", lwd = 2)
+```
+
+We can see that the quantiles are very different and stray from the line of identity throughout the entire plot making the normal distribution we estimated a bat fit for the distribution of the sample of adult female glycohemoglobin levels. Just like in the examples above I used simulation to plot the sampling distribution of the median.
+```{r}
+#median using the distribution we estimated using MM
+med7 <- qnorm(.5, mean = xbar, 
+            sd = s2)
+
+#simulation Median
+M <- 5000
+N <- 1000
+
+out <- rnorm(N*M, mean = xbar, 
+            sd = s2) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Glycohemoglobin", xlab = "Median Glycohemoglobin")
+```
+
+The estimated median of this normal distribution is `r round(med7,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+Lets see if we can find a better fit normal distribution using MLE.
+
+#### MLE
+
+Again to perform MLE, I have created a likelihood function using the normal distribution and its parameters. I then plugged this function into the MLE function that will find the value of the parameters that maximize the likelihood function.
+```{r}
+#same as the ll funciton above
+nLL <- function(mean, sd){
+  fs <- dnorm(
+    x = d1$gh,
+    mean = mean, 
+    sd = sd,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 160 and 5
+param_hat <- mle(nLL,
+    start = list(mean = 5, sd = 1),
+     method = "L-BFGS-B",
+    #lower bound for height is 0 and standard deviation is 5
+    lower = c(0, 0.01)
+    )
+
+coef(param_hat)
+```
+The estimated mean is 5.71 and the estimated standard deviation is 0.96. These are exactly the same as the estimated parameters we found using MM so we know this approximation will be a bad fit for the data. I will plot the same graphs as above to inspect the fit of the estimated distribution to the actual data.
+```{r}
+#PDF
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin of Adult Females using MLE", xlab = "Glycohemoglobin")
+curve(dnorm(x, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+With the estimated parameters the same as using MM, we can see that we get the exact same graph here as above for the PDF.
+```{r}
+#CDF
+plot(ecdf(d1$gh), main = "Glycohemoglobinof Adult Females using MLE - CDF Overlayed with ECDF ", xlab = "Glycohemoglobin")
+curve(pnorm(x, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 4,
+            add = TRUE)
+```
+
+Again, we see the same CDF overlayed with the eCDF of the estimated distribution that does not match well to the actual distribution.
+```{r}
+#Q-Q Plot
+qs <- seq(0.05, 0.95, length = 50)
+sample_qs <- quantile(d1$gh, qs)
+theor_qs <- qnorm(qs, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2])
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Glycohemoglobin using MLE")
+abline(0,1, col = "red", lwd = 2)
+```
+
+We see here that using MM and MLE we got the exact same results meaning that the normal distribution is not a good fit for the distribution of the sample of adult female glycohemoglobin levels. Again, I will simulate 5,000 distirbutions and plot the median of each.
+```{r}
+#median using the distribution we estimated using MLE
+med8 <- qnorm(.5, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2])
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rnorm(N*M, mean = coef(param_hat)[1], 
+            sd = coef(param_hat)[2]) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Glycohemoglobin", xlab = "Median Glycohemoglobin")
+```
+
+The estimated median of this normal distribution is `r round(med8,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. This is the same estimated median as using MM. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+### Gamma
+
+Since the normal distribution was not a good fit for the distribution of the sample of adult female glycohemoglobin levels, I will try to find the best fit using the gamma distribution. 
+
+#### MM
+
+From the system of equations I solved above, we know that
+
+$scale = \frac{s^2}{\bar{X}}$
+
+$shape = \frac{\bar{X}^2}{s^2}$
+
+We can estimate the parameters using the built in mean and variance functions in R and plugging them into the above equations for our data set.
+```{r}
+#E[X] and V[X]
+xbar <- mean(d1$gh)
+s2 <- var(d1$gh)
+
+shape_hat <- xbar^2/s2
+scale_hat <- s2/xbar
+```
+The estimated shape is 35.60 and the estimated scale is 0.16. I will overlay the estimated PDF onto the histogram of glycohemoglobin levels to visualize if our estimated distribution fits the data well. 
+```{r}
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin of Adult Females using MM", xlab = "Glycohemoglobin")
+curve(dgamma(x, shape = shape_hat, 
+            scale = scale_hat), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+The plot seems very similar to that of the normal distribution we estimated which means it is most likely not a good fit for the sample data. We can inspect the CDF overlayed with the eCDF to see other ways to interpret the fit.
+```{r}
+MM_gamma <- function(x){
+  pgamma(x, shape = shape_hat, scale = scale_hat)
+}
+
+plot(ecdf(d1$gh), main = "Glycohemoglobinof Adult Females using MM - CDF Overlayed with ECDF ", xlab = "Glycohemoglobin")
+curve(MM_gamma(x), add = TRUE, col = "red", lwd = 2)
+```
+
+Again, this plot is very similar to that of the normal distribution and the gamma distribution is not seeming to be a promising fit to the true data.
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$gh, qs)
+theor_qs <- qgamma(qs, shape = shape_hat, 
+            scale = scale_hat)
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Glycohemoglobin using MM")
+abline(0,1, col = "red", lwd = 2)
+```
+
+The qunatile points on the Q-Q plot are far from following the line of identity making the gamma distribution also a poor fit for the distribution of the sample of adult female glycohemoglobin levels. I used simulation to plot the sampling distribution for the median of this estimated distribution.
+```{r}
+#median using the distribution we estimated using MM
+med9 <- qgamma(.5, shape = shape_hat, 
+            scale = scale_hat)
+
+#simulation Median
+M <- 5000
+N <- 1000
+
+out <- rgamma(N*M, shape = shape_hat, 
+            scale = scale_hat) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Glycohemoglobin", xlab = "Median Glycohemoglobin")
+```
+
+The estimated median of this gamma distribution is `r round(med9,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+#### MLE
+
+The gamma distribution using MM was not a good fit for the distribution of the sample of adult female glycohemoglobin levels so I will try the same using MLE to see if I get different results.
+```{r}
+gLL <- function(shape, scale){
+  fs <- dgamma(
+    x = d1$gh,
+    shape = shape, 
+    scale = scale,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 
+param_hat <- mle(gLL,
+    start = list(shape = 30, scale = 0.2),
+     method = "L-BFGS-B",
+    #lower bound for height is 0
+    lower = c(0, 0.01)
+    )
+```
+
+The estimated shape is 47.29 and the estimated scale is 0.12. These are fairly different to the estimated parameters we found using MM so it seems like this approximated distribution could be a better fit for the data. I will plot the same graphs as above to inspect the fit of the estimated distribution to the actual data.
+```{r}
+#PDF
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin of Adult Females using MLE", xlab = "Glycohemoglobin")
+curve(dgamma(x, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+Although the peak is a bit higher in this estimated gamma distribution, it still does not seem like a good fit for the distribution of the sample of adult female glycohemoglobin levels.
+```{r}
+MM_gamma <- function(x){
+  pgamma(x, shape = coef(param_hat)[1], scale = coef(param_hat)[2])
+}
+
+plot(ecdf(d1$gh), main = "Glycohemoglobinof Adult Females using MLE - CDF Overlayed with ECDF ", xlab = "Glycohemoglobin")
+curve(MM_gamma(x), add = TRUE, col = "red", lwd = 2)
+```
+
+The eCDF does not look any more similar to the CDF meaning the distributions are not alike.
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$gh, qs)
+theor_qs <- qgamma(qs, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Glycohemoglobin using MLE")
+abline(0,1, col = "red", lwd = 2)
+```
+
+In addition, we can see that in the Q-Q plot the quantiles are very different and follow a completely different pattern than the line of identity. Even though the estimated parameters were a bit different using MLE versus MM, the gamma distribution does not seem to be a good fit to the actual sample data in either instance.
+```{r}
+#median using the distribution we estimated using MLE
+med10 <- qgamma(.5, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rgamma(N*M, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Glycohemoglobin", xlab = "Median Glycohemoglobin")
+```
+
+The estimated median of this gamma distribution is `r round(med10,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+Since the normal distribution and gamma distribution were a bad fit for the distribution of the sample of adult female glycohemoglobin levels, maybe the weibull distribution will have a better fit.
+
+### Weibull
+
+####  MM
+
+The exact same way as above, I optimized the equation below, plugging in the mean and variance for E[X] and V[X] respectively, and found the $k$ and $\lambda$ value that are the estimated shape and scale parameters for the weibull distribution.
+
+$(E[X]/\Gamma(1 + 1/k)^2 [\Gamma(1 + 2/k) - (\Gamma(1 + 1/k))^2] - V[X] = 0$
+
+```{r}
+#lambda
+lambda <- function(samp_mean, k){
+  samp_mean/gamma(1+1/k)
+}
+
+#V[X]
+var_weib <- function(k, samp_mean, samp_var){
+  lambda(samp_mean,k)^2*(gamma(1+2/k)-(gamma(1+1/k))^2) - samp_var
+}
+
+#optimization
+mm_opt <- optimize(f = function(x) {abs(var_weib(k = x, 
+                                   samp_mean = mean(d1$gh),
+                                   samp_var = var(d1$gh)))}, 
+         lower = 10, upper = 10000)
+
+#MM weibull k estimate
+weib_k <- mm_opt$minimum
+
+#MM weibull lambda estimate
+weib_lambda <- lambda(samp_mean = mean(d1$gh), k = weib_k)
+```
+
+The estimated shape is 10.00 and the estimated scale is 6.00. I will overlay the estimated PDF onto the histogram of heights I plotted above to visualize if our estimated distribution fits the data well. 
+```{r}
+#PDF
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin of Adult Females using MM", xlab = "Glycohemoglobin")
+curve(dweibull(x, shape = weib_k, 
+            scale = weib_lambda), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+Although its not perfect, this distribution seems to a bit different than the first two and could be a better fit to the data. The peak of the PDF still is not as tall as it should be and is slightly too far left, dropping down to 0 much quicker than the actual distribution. Lets look at the CDF to see if this sheds anymore light on how useful this approximated distribution will be.
+```{r}
+MM_weibull <- function(x){
+  pweibull(x, shape = weib_k, 
+            scale = weib_lambda)
+}
+
+plot(ecdf(d1$gh), main = "Glycohemoglobinof Adult Females using MM - CDF Overlayed with ECDF ", xlab = "Glycohemoglobin")
+curve(MM_weibull(x), add = TRUE, col = "red", lwd = 2)
+```
+
+We can see that the eCDF is quite different than the CDF of the sample of adult female glycohemoglobin levels. 
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$gh, qs)
+theor_qs <- qweibull(qs, shape = weib_k, 
+            scale = weib_lambda)
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Glycohemoglobin using MM")
+abline(0,1, col = "red", lwd = 2)
+```
+
+The Q-Q plot shows us just how off this estimated weibull distribution is from the underlying sample of data. We can see that is is a really bad fit for the distribution of the sample of adult female glycohemoglobin levels. I used simulation to find the sampling distribution of medians of this estimated distribution.
+```{r}
+#median using the distribution we estimated using MM
+med11 <- qweibull(.5, shape = weib_k, 
+            scale = weib_lambda)
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rweibull(N*M, shape = weib_k, 
+            scale = weib_lambda) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Glycohemoglobin", xlab = "Median Glycohemoglobin")
+```
+
+The estimated median of this weibull distribution is `r round(med11,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+#### MLE
+
+Using MM, we could not find a good estimate of the actual data using the weibull distribution but maybe we will find different results using MLE.
+```{r}
+wLL <- function(shape, scale){
+  fs <- dweibull(
+    x = d1$gh,
+    shape = shape, 
+    scale = scale,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 
+param_hat <- mle(wLL,
+    start = list(shape = 4, scale = 7),
+     method = "L-BFGS-B",
+    #lower bound for height is 0
+    lower = c(0, 0.01)
+    )
+```
+
+The estimated shape is 4.37 and the estimated scale is 6.12. These are very different to the estimated parameters we found using MM. I will plot the same graphs as above to inspect the fit of the estimated distribution to the actual data and see if maybe with these new estimated parameters the weibull distribution is still a good fit.
+```{r}
+#PDF
+hist(d1$gh, breaks = 100, freq = FALSE, main = "Glycohemoglobin of Adult Females using MLE", xlab = "Glycohemoglobin")
+curve(dweibull(x, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]), 
+            col = "red", 
+            lwd = 6,
+            add = TRUE)
+```
+
+The PDF is very different than the distribution of the sample of adult female glycohemoglobin levels meaning this distribution is probably not a good fit to the data.
+```{r}
+MM_weibull <- function(x){
+  pweibull(x, shape = coef(param_hat)[1], scale = coef(param_hat)[2])
+}
+
+plot(ecdf(d1$gh), main = "Glycohemoglobinof Adult Females using MLE - CDF Overlayed with ECDF ", xlab = "Glycohemoglobin")
+curve(MM_weibull(x), add = TRUE, col = "red", lwd = 2)
+```
+
+In looking at the CDF versus the eCDF, we can see that this estimated distribution looks even worse than the one we estimated using MM.
+```{r}
+#Q-Q Plot
+qs <- seq(0.01, 0.99, length = 99)
+sample_qs <- quantile(d1$gh, qs)
+theor_qs <- qweibull(qs, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+plot(sample_qs, theor_qs, pch = 16, main = "Q-Q Plot of Adult Female Glycohemoglobin using MLE")
+abline(0,1, col = "red", lwd = 2)
+```
+
+As expected, the Q-Q plot shows the quantiles are not at all alike between the estimated distribution and the distribution of the sample of adult female glycohemoglobin levels. I used simulation to look at the sampling distribution of the median of this estimated distribution.
+```{r}
+#median using the distribution we estimated using MLE
+med12 <- qweibull(.5, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2])
+
+#simulation Medians
+M <- 5000
+N <- 1000
+
+out <- rweibull(N*M, shape = coef(param_hat)[1], 
+            scale = coef(param_hat)[2]) %>% array(dim = c(M,N))
+
+sample_dist <- apply(out, 1, median)
+
+hist(sample_dist, breaks = 50, main = "Simulated Sample Distribution of Female Glycohemoglobin", xlab = "Median Glycohemoglobin")
+```
+
+The estimated median of this weibull distribution is `r round(med12,2)` and the simulated medians approximately follow a normal distribution with the estimated median right in the middle. This is similar to the estimated median as using MM. The table below shows the range of the middle 95% of the sample distribution.
+```{r}
+#chopping of 2.5% on each side
+quantile(sample_dist, c(0.05/2, 1 - 0.05/2))
+```
+
+Overall, it seems like using MM and MLE the normal distribution, gamma distribution and weibull distribution are all not good fits for estimating the underlying distribution of the sample of adult female glycohemoglobin levels. To find a better fit we would have to do more investigation and try out other distributions or use mixed distributions.
+
+# Conclusion
+
+In conclusion, you now understand how to use the Method of Moments and Maximum Likelihood Estimation with several different distributions to try and estimate the parameters of each distribution in finding the best approximation of the underlying distribution. We found that heights most closely follow a normal distribution where as glycohemoglobin levels do not follow the normal, gamma or weibull distributions. While MM and MLE are both good approaches it is important to note that they produce very similar if not the same results when a very precise approximation to the real distribution of the data is found, but can produce varied results when the estimated distribution do not match well with the true distribution.
