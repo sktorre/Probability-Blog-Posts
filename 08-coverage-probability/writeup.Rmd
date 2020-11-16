@@ -1,0 +1,137 @@
+---
+title: "Understanding Coverage Probability"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+library(dplyr)
+library(stats4)
+```
+
+# Introduction
+
+Supposed we are trying to calculate a characteristic of a population given a sample. We do not know the true distribution of the sample or the population and we can only calculate estimated statistics using the sample data set. But how do we gain confidence that our estimates are close to the true values of interest? We can construct a confidence interval for that value, but how often will that confidence interval really contain the true population parameter of interest? We can use simulation to construct many confidence intervals and find the ratio of the constructed intervals that do contain the true parameter value. This is called the coverage probability. Here I will use an example to demonstrate how to calculate and interpret the coverage probability. 
+
+# Background
+
+The **coverage probability** is the probability a set of estimated confidence intervals of a characteristic of interest contain the true value of the characteristic for the given population. To calculate the coverage probability for a certain characteristic given a sample of the population, you must first estimate the true distribution of population using a technique such as Maximum Likelihood Estimation (MLE), Method of Moments (MM) or Kernel Density Estimation (KDE). 
+
+In this demonstration I will use MLE to estimate the distribution and calculate the coverage probability for the median of the population using a 95% confidence interval. Here we will define the 95% confidence interval of the median to be the middle 95% of the sampling distribution of the median. 
+
+To calculate the coverage probability one can follow these steps:
+
+1. Generate a sample of size $N$ from a known distribution
+2. Construct a confidence interval
+3. Determine of the confidence interval captures the population parameter
+4. Repeat steps 1-3 numerous times and estimate the coverage probability as the proportion of samples for which the confidence interval calculated captures the population parameter. 
+
+# Exploration
+
+For this demonstration, I chose a random sample with $N = 201$ from the standard normal distribution to calculate the coverage probability of the median. 
+```{r}
+set.seed(45335)
+N <- 201
+sample <- rnorm(N)
+
+med <- median(sample)
+```
+
+We know that the true median of the standard normal distribution is 0. The median of the random sample with $N = 201$ is `r round(med,3)`. Using this sample I used MLE to estimate the parameters of the distribution. Since we know our distribution is normal, we will use MLE to estimate the mean and standard deviation of the population.
+```{r}
+nLL <- function(mean, sd){
+  fs <- dnorm(
+    x = sample,
+    mean = mean, 
+    sd = sd,
+    log = TRUE
+    )
+    -sum(fs)
+}
+
+#does search starting with our guesses of 0 and 1
+param_hat <- mle(nLL,
+    start = list(mean = 0, sd = 1),
+     method = "L-BFGS-B"
+    )
+
+#estimated parameters
+mean_hat <- coef(param_hat)[[1]]
+sd_hat <- coef(param_hat)[[2]]
+
+hist(sample, freq = FALSE, breaks = 20, main = "Distribution of the Sample", xlab = "Sample Values")
+curve(dnorm(x, mean_hat, sd_hat), col = "blue", add = TRUE)
+```
+
+Using MLE, I found the estimated mean to be `r round(mean_hat, 3)` and the estimated standard deviation to be `r round(sd_hat,3)`. Here we can see that the estimated distribution, in blue, is a pretty close fit to the actual sample distribution.
+
+Since I want to eventually calculate the coverage probability for the median, I will use the estimated distribution I just calculated to find the estimated population median. We know this is just an estimate, so I will use simulation to create a distribution of estimated medians and take the 95% confidence interval to understand the distribution and range of the median of this population.
+```{r}
+#median using the distribution we estimated using MLE
+est_med <- qnorm(.5, mean = mean_hat, 
+            sd = sd_hat)
+
+#simulation of medians
+R <- 1000
+
+medians <- NA
+for (i in 1:N){
+  sample_dist <- rnorm(N, mean = mean_hat, 
+            sd = sd_hat)
+  medians[i] <- median(sample_dist)
+}
+
+hist(medians, breaks = 50, main = "Simulated Sample Distribution of Estimated Median", xlab = "Estimated Median")
+```
+
+The estimated median of my sample is `r round(est_med,3)`. The graph above shows the sampling distribution of the estimated median. 
+```{r}
+#chopping of 2.5% on each side
+conf_95 <- quantile(medians, c(0.05/2, 1 - 0.05/2))
+```
+
+The 95% confidence interval of the sampling distribution of the estimated median is from `r round(conf_95[[1]],3)` to `r round(conf_95[[2]],3)` and the true median of 0 falls within this range. But will the true population median always fall within the 95% confidence interval? After all it is only a 95% confidence interval and not 100%. This is where the coverage probability comes into play. I will have to run this simulation many times and calculate the 95% confidence interval each time, finding the proportion of samples that contain the true population median of 0. 
+
+I took the code for one simulation above and put it into a function to find the coverage probability using 5,000 simulated samples.
+```{r}
+coverage_probability <- function(R){
+  prop <- NA
+  N <- 201
+  for (i in 1:R){
+    sample <- rnorm(N)
+    
+    mean_hat <- mean(sample)
+    sd_hat <- sqrt(((N-1)/N)*var(sample))
+
+    medians <- NA
+    for (j in 1:5000){
+      sample_dist <- rnorm(N, mean = mean_hat, sd = sd_hat)
+      medians[j] <- median(sample_dist)
+    }
+    
+    conf_int <- quantile(medians, c(0.05/2, 1 - 0.05/2))
+    prop[i] <- (conf_int[1] < 0 & conf_int[2] > 0) 
+  }
+return(mean(prop))
+}
+```
+
+```{r, cache = TRUE}
+cov_prob <- coverage_probability(5000)
+```
+I found the coverage probability to be `r cov_prob`, meaning `r cov_prob*100`% of the time we take a sample of the true population it will contain the median. 
+
+Here I demonstrated finding the coverage probability for the median of the standard normal distribution using $N = 201$. What if I wanted to find the coverage probability of the mean or some other operating characteristic? What if the true distribution is gamma or weibull? What if the sample size was larger or smaller?
+
+All of these factors could change the results of the coverage probability. In fact, my results were pretty high. If we had ran the simulation even more times, the coverage probability likely would've fallen closer to 95%. We could use the same methods and change median to min, max or mean to learn more about other operating characteristics for the population. 
+
+# Conclusion
+
+In conclusion, I have demonstrated how one could calculate the coverage probability of a characteristic of a population to understand more about the sample, the characteristic and the population. Here I used the median of the standard normal distribution and used MLE to estimate the true distribution. This can be applied to any other type of continuous distribution and can be used to calculate the coverage probability of any operation characteristic of the population. You could also use other techniques to estimate the distribution including Method of Moments or Kernel Density Estimation. I calculated the confidence intervals by finding the middle 95%, but this could be changed to capture a different 95% of the sample depending on the type of distribution of the sample and what makes the most sense for the population at hand. 
