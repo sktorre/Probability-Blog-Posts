@@ -23,3 +23,5 @@ Sarah Torrence
 ## [Exploring Log Transformations](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/05-log-transformation/writeup.Rmd)
 
 ## [Understanding Order Statistics](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/06-order-statistics/writeup.Rmd)
+
+## [MLE and MM Tutorial](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/07-mle-and-mm/writeup.Rmd)
