@@ -25,3 +25,5 @@ Sarah Torrence
 ## [Understanding Order Statistics](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/06-order-statistics/writeup.Rmd)
 
 ## [MLE and MM Tutorial](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/07-mle-and-mm/writeup.Rmd)
+
+## [Understanding Coverage Probability](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/08-coverage-probability/writeup.Rmd)
