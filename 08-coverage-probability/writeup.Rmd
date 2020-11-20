@@ -91,7 +91,7 @@ for (i in 1:N){
 hist(medians, breaks = 50, main = "Simulated Sample Distribution of Estimated Median", xlab = "Estimated Median")
 ```
 
-The estimated median of my sample is `r round(est_med,3)`. The graph above shows the sampling distribution of the estimated median. 
+The estimated median of my sample is `r round(est_med,3)`. The graph above shows the sampling distribution of the estimated median. Now I will look at the 95% confidence interval to see if the estimated mean falls within this range. Because we have already estimated the distribution or medians above, we can take the middle 95% percent of values by cutting off 2.5% of values on each tail. This can be done using the quantile function.
 ```{r}
 #chopping of 2.5% on each side
 conf_95 <- quantile(medians, c(0.05/2, 1 - 0.05/2))
@@ -126,7 +126,8 @@ return(mean(prop))
 ```{r, cache = TRUE}
 cov_prob <- coverage_probability(5000)
 ```
-I found the coverage probability to be `r cov_prob`, meaning `r cov_prob*100`% of the time we take a sample of the true population it will contain the median. 
+
+I found the coverage probability to be `r cov_prob`, meaning `r cov_prob*100`% of the time we take a sample of the true population it will contain the median. To calculate this coverage probability, I found the estimated distribution of medians for 5,000 distributions using the estimated mean and standard deviation I calculated using MLE in each case. For each distribution of medians, I calculated the 95% confidence interval by using the quantile function to remove 2.5% from each side of the tail leaving the middle 95% of the distribution. In each case I determined whether the true median of 0 fell within this range. The coverage probability is the number of estimated medians that fall within the 95% confidence divided by the total number of simulated distributions. 
 
 Here I demonstrated finding the coverage probability for the median of the standard normal distribution using $N = 201$. What if I wanted to find the coverage probability of the mean or some other operating characteristic? What if the true distribution is gamma or weibull? What if the sample size was larger or smaller?
 
