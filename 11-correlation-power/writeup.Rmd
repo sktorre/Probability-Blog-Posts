@@ -1,0 +1,92 @@
+---
+title: "Relationship Between Correlation and Power"
+author: "Sarah Torrence"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 3
+    toc_float: true
+---
+
+# Introduction
+
+Understanding the correlation between to variables can be very important in understanding how measurements or observations can be related. If two variables are highly correlated, meaning they have a strong association, it could be a good strategy to use one in replace of the other in certain instances. For example, it could be difficult or expensive to collect data on a certain measurement, but much easier to collect data on a measurement that is highly correlated to the original measurement. Because there is a strong correlation between the two variables, the second could be used to replace the first.
+
+If you are submitting a grant application to fund a study that shows two measurements are highly correlated, this blog post will show you how to have a higher likelihood of success in getting the grant. Grant reviewers want to fund studies that demonstrate the correlation between the two measurements in the study is greater than 0.8. This post will show you how best to achieve a correlation above 0.8 and improve your chances of receiving the grant.
+
+# Background
+
+To understand how to conclusively demonstrate that the correlation between two measurements is above 0.8, I must define a few concepts. 
+
+**Correlation:** The correlation between two variables is the measure of a statistical relationship between them or the degree to which the variables are linearly related. Simply put, correlation is the measure of how related two variables are to one another.
+
+**Power:** Power is the probability that a significance test show the presence of an effect, or a deviation from the null hypothesis. Power is the probability of avoiding a Type II error (β) or in mathematical terms Power = 1 - β. In this example, the power is the probability the study will end in a success (correlation of greater than 0.8).
+
+**95% Confidence Interval:** A 95% confidence interval for a specific characteristic means we are 95% confident that the true population value for that characteristic falls within the given interval range.I fthe 95% confidence interval is centered around the mean, then 2.5% of the sample falls below and 2.5% falls above the 95% confidence interval. 
+
+# Methods
+
+To know if the correlation will truly be greater than 0.8 for the population of two measurements given a sample of size N, we will need to take the one-sided 95% confidence interval (the right tail). If the confidence interval is completely within the range from 0.8 to 1 (greater than 0.8), then we can conclude that the true correlation between the two variables is in fact greater than 0.8.
+
+To find the power, the probability the true underlying correlation is greater than 0.8, we will have to simulate the above method over many samples of size N and find the proportion of times the confidence interval was entirely above 0.8. This will greatly depend on sample size and the population correlation so we will run the simulation to calculate the power over sample sizes 25, 50, 75 and 100 and over a range of correlations from 0.8 to 0.95. That way we can inspect the relationship power has with these two factors and find the best combination available so that the study will be a success and a grant will more likely be given.
+
+```{r, cache = TRUE, message = FALSE}
+library(ggplot2)
+library(tidyverse)
+
+set.seed(20394)
+suppressPackageStartupMessages(require(mvtnorm))
+
+power_corr <- function(N, rho){
+  
+  null_correlation <- 0.8
+  R <- 5000
+  power <- NA
+  for (j in 1:length(rho)){
+    sigma <- array(c(1,rho[j],rho[j],1), c(2,2))
+    mu <- c(0,0)
+    
+    detect <- rep(NA, R)
+    for(i in 1:R){
+      #multivariate normal distribution
+      data <- rmvnorm(N[j], mean = mu, sigma = sigma)
+      # Measurement A is data[,1] and measurement B is data[,2]
+      #one sided 95 %  confidence interval
+      results <- cor.test(x = data[,1], y = data[,2], alternative = "greater")
+      #is lower bound of confidence intervaL above the threshold (1 or 0)
+      detect[i] <- results$conf.int[1] > null_correlation
+    }
+    power[j] <- mean(detect)
+  }
+  return(power)
+}
+
+# Sample size
+N <- c(25, 50, 75, 100)
+
+#True population correlation
+rho <- seq(0.8, 0.95, by = 0.01)
+
+final_results <- expand.grid(N = N, rho = rho, power = NA)
+for (i in 1:nrow(final_results)){
+  final_results[i,3] <- power_corr(N = final_results[i,1], rho = final_results[i,2])
+}
+
+final_results %>% ggplot(aes(x = rho, y = power, col = as.factor(N))) +
+  geom_line() +
+  labs(
+    title = "Relationship Between Power and Correlation",
+    x = "Correlation",
+    y = "Power",
+    col = "Sample Size"
+  ) +
+  theme_classic()
+```
+The above graph shows how dramatically the power can change based on the sample size and the correlation. We can see that as both sample size and correlation increase, so does the power. That means that the larger the sample size, the better chances we have of obtaining a power above 0.8. Additionally, the larger the population correlation, the better chances we have of obtaining a power above 0.8.
+
+# Conclusion
+
+In a study, it is hard to increase the correlation between two variables, but depending on the data collection process, it may not be as hard to increase the sample size. This is beneficial to know in that as a researcher you could have a better chance of receiving a grant by increasing the sample size within your study. Of course if two measures are not highly correlated, above 0.8, it is not likely to have a large enough power to ensure the accuracy of your study. You will have a better chance of success the higher the correlation, this just may not be something you can control as easily as sample size.
+
