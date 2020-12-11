@@ -11,7 +11,7 @@
 
 <meta name="author" content="Sarah Torrence" />
 
-<meta name="date" content="2020-12-10" />
+<meta name="date" content="2020-12-11" />
 
 <title>Final Exam</title>
 
@@ -413,7 +413,7 @@ summary {
 
 <h1 class="title toc-ignore">Final Exam</h1>
 <h4 class="author">Sarah Torrence</h4>
-<h4 class="date">December 10, 2020</h4>
+<h4 class="date">December 11, 2020</h4>
 
 </div>
 
@@ -496,10 +496,10 @@ p</code></pre>
 <pre><code>## [1] 0.4650072</code></pre>
 <p>The probability that both strategies result in a goat is 0.48.</p>
 <p><strong>B</strong>. Continuing from part <strong>C</strong>, what is the probability that at least one of the strategies results in winning a car?</p>
-<p>I took my results from the simulation above and converted them into a vector of 1’s and 0’s where this time the result of a car was a 1 for a success. Then again, I took the mean of each strategy to find the probability of resulting in a car in each case. To find the probability that at least one of the strategies results in winning a car I have to add together the probability of each strategy separately and subtract the instances in which they both result in a car to not double count.</p>
+<p>I took my results from the simulation above and converted them into a vector of 1’s and 0’s where this time the result of a car was a 1 for a success. Then again, I took the mean of each strategy to find the probability of resulting in a car in each case. To find the probability that at least one of the strategies results in winning a car I have to add together the probability of each strategy separately and subtract the instances in which they both result in a car to not double count. This is the formula for this process:</p>
+<p><span class="math inline">\(P(s1=car OR s2=car) = P(s1=car) + P(s2=car) - P(s1=car AND s2=car)\)</span></p>
 <p>Another way to solve the problem is to take the total probability (which is always 1) and subtract the probability that neither strategy results in winning a car. This can be done using the probabilities of resulting in a goat from the question above, multiplying and subtracting the result from 1.</p>
-<p>P(s1 = car) + P(s2 = car) - P(s1 = car)P(s2 = car) = P(car &gt;= 1)</p>
-<p>1 - P(s1 = goat)P(s2 = goat) = P(car &gt;= 1)</p>
+<p><span class="math inline">\(1 - P(s1 = goat)P(s2 = goat) = P(car &gt;= 1)\)</span></p>
 <pre class="r"><code>car1 &lt;- ifelse(strategy1 == &quot;car&quot;, 1, 0)
 car2 &lt;- ifelse(strategy2 == &quot;car&quot;, 1, 0)
 
@@ -781,77 +781,15 @@ p</code></pre>
 <p><span class="math inline">\(P(male|FL = 37) = \frac{f_{FL|male}(37)P(G = male)}{f_{FL|male}(37)P(G = male) + f_{FL|female}(37)P(G = female)}\)</span></p>
 <p><span class="math inline">\(P(male|FL = 37) = \frac{dnorm(37, 40, 3.4)*0.5}{dnorm(37, 40, 3.4)*0.5 + dnorm(37, 36, 3.3)*0.5}\)</span></p>
 <p><span class="math inline">\(P(male|FL = 37) = 0.4078\)</span></p>
+<p>Here femur length is continuous so I plugged in the density for femur length into the equation.</p>
 <pre class="r"><code>F_fl37 &lt;- dnorm(37, mean = 36, sd = 3.3)
 
 M_fl37 &lt;- dnorm(37, mean = 40, sd = 3.4)
 
-p &lt;- (dnorm(37, mean = 40, sd = 3.4)*0.5)/((dnorm(37, mean = 40, sd = 3.4)*0.5) + dnorm(37, mean = 36, sd = 3.3)*0.5)</code></pre>
-<table>
-<thead>
-<tr class="header">
-<th align="center"></th>
-<th align="center">M</th>
-<th align="center">F</th>
-<th align="center"></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="center"></td>
-<td align="center">0.68</td>
-<td align="center">0.32</td>
-<td align="center"></td>
-</tr>
-<tr class="even">
-<td align="center">FL &gt;=37</td>
-<td align="center">0.4055</td>
-<td align="center">0.191</td>
-<td align="center">0.5965</td>
-</tr>
-<tr class="odd">
-<td align="center"></td>
-<td align="center">0.811</td>
-<td align="center">0.38</td>
-<td align="center"></td>
-</tr>
-<tr class="even">
-<td align="center">———</td>
-<td align="center">———</td>
-<td align="center">——–</td>
-<td align="center">———</td>
-</tr>
-<tr class="odd">
-<td align="center"></td>
-<td align="center">0.234</td>
-<td align="center">0.766</td>
-<td align="center"></td>
-</tr>
-<tr class="even">
-<td align="center">FL &lt; 37</td>
-<td align="center">0.0945</td>
-<td align="center">0.3095</td>
-<td align="center">0.404</td>
-</tr>
-<tr class="odd">
-<td align="center"></td>
-<td align="center">0.189</td>
-<td align="center">0.619</td>
-<td align="center"></td>
-</tr>
-<tr class="even">
-<td align="center">———</td>
-<td align="center">———</td>
-<td align="center">——–</td>
-<td align="center">———</td>
-</tr>
-<tr class="odd">
-<td align="center"></td>
-<td align="center">0.5</td>
-<td align="center">0.5</td>
-<td align="center">1</td>
-</tr>
-</tbody>
-</table>
+p &lt;- (dnorm(37, mean = 40, sd = 3.4)*0.5)/((dnorm(37, mean = 40, sd = 3.4)*0.5) + dnorm(37, mean = 36, sd = 3.3)*0.5)
+
+p</code></pre>
+<pre><code>## [1] 0.407765</code></pre>
 <p><strong>A.</strong> Continuing part <strong>B</strong>, generate a plot of P(femor from male | femor length = x). Let femor length range from 25 to 50.</p>
 <pre class="r"><code>femur_length &lt;- 25:50
 prob_male &lt;- 0.5*dnorm(femur_length, mean = 40, sd = 3.4)/(0.5*dnorm(femur_length, mean = 40, sd = 3.4) + 0.5*dnorm(femur_length, mean = 36, sd = 3.3))
@@ -899,6 +837,8 @@ for (i in 1:5000){
 mean(EV)</code></pre>
 <pre><code>## [1] 2.000409</code></pre>
 <p>Using simulation I found the expected value to be 2. Even further, I can calculated the expected value analytically by adding together the expected value from both distributions since we know how many students come from each distribution (half from each).</p>
+<p>In this case,</p>
+<p><span class="math inline">\(D = U + V\)</span> therefore <span class="math inline">\(E[D] = E[U] + E[V]\)</span></p>
 <p>I know the expected value of the first distribution as all values are 0 so the expected value is 0.</p>
 <p>The expected value of a gamma distribution is calculated as follows: <span class="math inline">\(E[X] = shape*scale\)</span></p>
 <p>so plugging the given gamma distribution I get <span class="math inline">\(E[X] = 2*2 = 4\)</span></p>
@@ -933,7 +873,7 @@ for (i in 1:R){
 
 mean(variance)</code></pre>
 <pre><code>## [1] 7.025743</code></pre>
-<p>Under the new capped policy the variance is 7.03 ($7,030). This is a pretty large variance considering the expected value of 1.95, but it makes sense in this mixture distribution because typically students will either have $0 in hospital charges or a larger bill.</p>
+<p>Under the new capped policy the variance is 7.03 ($7,030). As the variance is a measure of spread, this distribution has a large spread of values. It is a pretty large variance considering the expected value of 1.95, but it makes sense in this mixture distribution because typically students will either have $0 in hospital charges or a larger bill.</p>
 </div>
 <div id="transformations-sampling-distributions" class="section level1">
 <h1>6. Transformations &amp; Sampling Distributions</h1>
@@ -1077,7 +1017,12 @@ xbar &lt;- mean(bmi)
 s2 &lt;- var(bmi)
 
 shape_hat &lt;- xbar^2/s2
-scale_hat &lt;- s2/xbar</code></pre>
+scale_hat &lt;- s2/xbar
+
+shape_hat</code></pre>
+<pre><code>## [1] 14.83079</code></pre>
+<pre class="r"><code>scale_hat</code></pre>
+<pre><code>## [1] 1.979899</code></pre>
 <p>I used the <code>mean</code> and <code>var</code> functions to estimate the shape and scale. The estimated shape is 14.83 and the estimated scale is 1.98. I will overlay the estimated PDF onto the histogram of bmi to visualize if the estimated distribution fits the data well.</p>
 <pre class="r"><code>hist(bmi, breaks = 100, freq = FALSE,main = &quot;BMI of Adult Females using MM&quot;, xlab = &quot;BMI&quot;)
 curve(dgamma(x, shape = shape_hat, 

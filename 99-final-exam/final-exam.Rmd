@@ -102,13 +102,13 @@ The probability that both strategies result in a goat is 0.48.
 
 **B**. Continuing from part **C**, what is the probability that at least one of the strategies results in winning a car?
 
-I took my results from the simulation above and converted them into a vector of 1's and 0's where this time the result of a car was a 1 for a success. Then again, I took the mean of each strategy to find the probability of resulting in a car in each case. To find the probability that at least one of the strategies results in winning a car I have to add together the probability of each strategy separately and subtract the instances in which they both result in a car to not double count.
+I took my results from the simulation above and converted them into a vector of 1's and 0's where this time the result of a car was a 1 for a success. Then again, I took the mean of each strategy to find the probability of resulting in a car in each case. To find the probability that at least one of the strategies results in winning a car I have to add together the probability of each strategy separately and subtract the instances in which they both result in a car to not double count. This is the formula for this process:
+
+$P(s1=car OR s2=car) = P(s1=car) + P(s2=car) - P(s1=car AND s2=car)$
 
 Another way to solve the problem is to take the total probability (which is always 1) and subtract the probability that neither strategy results in winning a car. This can be done using the probabilities of resulting in a goat from the question above, multiplying and subtracting the result from 1.
 
-P(s1 = car) + P(s2 = car) - P(s1 = car)P(s2 = car) = P(car >= 1)
-
-1 - P(s1 = goat)P(s2 = goat) = P(car >= 1)
+$1 - P(s1 = goat)P(s2 = goat) = P(car >= 1)$
 
 ```{r, cache = TRUE}
 car1 <- ifelse(strategy1 == "car", 1, 0)
@@ -340,25 +340,17 @@ $P(male|FL = 37) = \frac{dnorm(37, 40, 3.4)*0.5}{dnorm(37, 40, 3.4)*0.5 + dnorm(
 
 $P(male|FL = 37) = 0.4078$
 
+Here femur length is continuous so I plugged in the density for femur length into the equation. 
+
 ```{r}
 F_fl37 <- dnorm(37, mean = 36, sd = 3.3)
 
 M_fl37 <- dnorm(37, mean = 40, sd = 3.4)
 
 p <- (dnorm(37, mean = 40, sd = 3.4)*0.5)/((dnorm(37, mean = 40, sd = 3.4)*0.5) + dnorm(37, mean = 36, sd = 3.3)*0.5)
-```
 
-|         |    M    |   F    |         |
-|:-------:|:-------:|:------:|:-------:|
-|         |  0.68   |  0.32  |         | row
-| FL >=37 | 0.4055  |  0.191 | 0.5965  | cell
-|         |  0.811  |  0.38  |         | column
-|---------|---------|--------|---------|
-|         |  0.234  | 0.766  |         | row
-| FL < 37 | 0.0945  | 0.3095 |  0.404  | cell
-|         |  0.189  | 0.619  |         | column
-|---------|---------|--------|---------|    
-|         |   0.5   |  0.5   |    1    |
+p
+```
 
 **A.**  Continuing part **B**, generate a plot of P(femor from male | femor length = x).  Let femor length range from 25 to 50.
 
@@ -421,6 +413,10 @@ mean(EV)
 
 Using simulation I found the expected value to be 2. Even further, I can calculated the expected value analytically by adding together the expected value from both distributions since we know how many students come from each distribution (half from each).
 
+In this case,
+
+$D = U + V$ therefore $E[D] = E[U] + E[V]$
+
 I know the expected value of the first distribution as all values are 0 so the expected value is 0.
 
 The expected value of a gamma distribution is calculated as follows:
@@ -472,7 +468,7 @@ for (i in 1:R){
 mean(variance)
 ```
 
-Under the new capped policy the variance is 7.03 ($7,030). This is a pretty large variance considering the expected value of 1.95, but it makes sense in this mixture distribution because typically students will either have \$0 in hospital charges or a larger bill. 
+Under the new capped policy the variance is 7.03 ($7,030). As the variance is a measure of spread, this distribution has a large spread of values. It is a pretty large variance considering the expected value of 1.95, but it makes sense in this mixture distribution because typically students will either have \$0 in hospital charges or a larger bill. 
 
 # 6. Transformations & Sampling Distributions
 
@@ -654,6 +650,9 @@ s2 <- var(bmi)
 
 shape_hat <- xbar^2/s2
 scale_hat <- s2/xbar
+
+shape_hat
+scale_hat
 ```
 
 I used the `mean` and `var` functions to estimate the shape and scale. The estimated shape is 14.83 and the estimated scale is 1.98. I will overlay the estimated PDF onto the histogram of bmi to visualize if the estimated distribution fits the data well. 
