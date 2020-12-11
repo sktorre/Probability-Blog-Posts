@@ -27,3 +27,5 @@ Sarah Torrence
 ## [MLE and MM Tutorial](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/07-mle-and-mm/writeup.Rmd)
 
 ## [Understanding Coverage Probability](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/08-coverage-probability/writeup.Rmd)
+
+## [Relationship Between Correlation and Power](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/11-correlation-power/writeup.Rmd)
