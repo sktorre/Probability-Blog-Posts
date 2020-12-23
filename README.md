@@ -12,20 +12,22 @@ Sarah Torrence
 
 <i class="fab fa-github-square"></i> sktorre
 
-## [Roulette Simulation](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/01-roulette-simulation/writeup.Rmd)
+## Blog Links
 
-## [Monte Carlo Error](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/02-monte-carlo-error/writeup.Rmd)
+### [Roulette Simulation](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/01-roulette-simulation/writeup.Rmd)
 
-## [What is the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd)
+### [Monte Carlo Error](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/02-monte-carlo-error/writeup.Rmd)
 
-## [Does Home Field Advantage Have an Impact on the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/04-home-field-advantage/writeup.Rmd)
+### [What is the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/03-discrete-probability-calculations/writeup.Rmd)
 
-## [Exploring Log Transformations](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/05-log-transformation/writeup.Rmd)
+### [Does Home Field Advantage Have an Impact on the Probability of Winning the World Series?](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/04-home-field-advantage/writeup.Rmd)
 
-## [Understanding Order Statistics](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/06-order-statistics/writeup.Rmd)
+### [Exploring Log Transformations](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/05-log-transformation/writeup.Rmd)
 
-## [MLE and MM Tutorial](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/07-mle-and-mm/writeup.Rmd)
+### [Understanding Order Statistics](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/06-order-statistics/writeup.Rmd)
 
-## [Understanding Coverage Probability](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/08-coverage-probability/writeup.Rmd)
+### [MLE and MM Tutorial](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/07-mle-and-mm/writeup.Rmd)
 
-## [Relationship Between Correlation and Power](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/11-correlation-power/writeup.Rmd)
+### [Understanding Coverage Probability](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/08-coverage-probability/writeup.Rmd)
+
+### [Relationship Between Correlation and Power](https://github.com/sktorre/probability-and-inference-portfolio-torrence-sarah/blob/master/11-correlation-power/writeup.Rmd)
